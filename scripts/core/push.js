@@ -7,6 +7,23 @@
     "https://script.google.com/macros/s/AKfycbyYbl54n8yvy_z12mZuw3KHIuXCXrgZ6XV5JGSTiKlRLUDswhNa1ZEgeIMFK6xw2FDR5w/exec";
   var WEB_PUSH_CONFIG = window.CALLME_WEB_PUSH || {};
   var tokenRefreshPromise = null;
+  var foregroundMessaging = null;
+
+  function watchForegroundMessages(messagingSdk, messaging) {
+    if (foregroundMessaging || typeof messagingSdk.onMessage !== "function") return;
+    foregroundMessaging = messagingSdk.onMessage(messaging, function (payload) {
+      var data = payload?.data || {};
+      if (data.kind === "call-accepted" || data.kind === "call-declined") {
+        window.dispatchEvent(new CustomEvent("callme:fcm-" + data.kind, {
+          detail: { peerId: data.sender || data.title || "" },
+        }));
+      } else if ((data.kind === "message" || data.kind === "call") && Notification.permission === "granted") {
+        var title = data.title || "CallMe";
+        var options = { body: data.body || "", icon: "./assets/logo-192.png", data: { url: new URL("./", window.location.href).href, sender: data.sender || "", kind: data.kind || "message", video: /video/i.test(data.body || "") } };
+        void ensureWorker().then(function (worker) { return worker.showNotification(title, options); });
+      }
+    });
+  }
 
   var me = function () {
     return (
@@ -95,7 +112,9 @@
     var messagingSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js");
     var app = appSdk.getApps().length ? appSdk.getApp() : appSdk.initializeApp(WEB_PUSH_CONFIG);
     if (!messagingSdk.isSupported || !(await messagingSdk.isSupported())) throw new Error("FCM Web tidak didukung browser ini.");
-    var token = await messagingSdk.getToken(messagingSdk.getMessaging(app), { vapidKey: WEB_PUSH_CONFIG.vapidPublicKey, serviceWorkerRegistration: worker });
+    var messaging = messagingSdk.getMessaging(app);
+    watchForegroundMessages(messagingSdk, messaging);
+    var token = await messagingSdk.getToken(messaging, { vapidKey: WEB_PUSH_CONFIG.vapidPublicKey, serviceWorkerRegistration: worker });
     if (!token) throw new Error("Firebase tidak memberikan token untuk browser ini.");
     var response = await fetch(ENDPOINT, {
       method: "POST",
@@ -118,7 +137,9 @@
       var appSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
       var messagingSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js");
       var app = appSdk.getApps().length ? appSdk.getApp() : appSdk.initializeApp(WEB_PUSH_CONFIG);
-      var token = await messagingSdk.getToken(messagingSdk.getMessaging(app), { vapidKey: WEB_PUSH_CONFIG.vapidPublicKey, serviceWorkerRegistration: worker });
+      var messaging = messagingSdk.getMessaging(app);
+      watchForegroundMessages(messagingSdk, messaging);
+      var token = await messagingSdk.getToken(messaging, { vapidKey: WEB_PUSH_CONFIG.vapidPublicKey, serviceWorkerRegistration: worker });
       if (!token) return false;
       return fetch(ENDPOINT, {
         method: "POST",
@@ -187,6 +208,10 @@
         (video ? "Panggilan video" : "Panggilan suara") + " dari " + name,
         { sender: user },
       );
+    },
+    answerCall: function (to, video) {
+      var user = me();
+      notify(to, "call-accepted", user, video ? "Panggilan video dijawab" : "Panggilan suara dijawab", { sender: user });
     },
   });
 })();
