@@ -386,6 +386,11 @@
         finish(false);
         return;
       }
+      if (detail.kind === "call-accepted" || detail.kind === "call-declined") {
+        window.dispatchEvent(new CustomEvent(`callme:fcm-${detail.kind}`, {
+          detail: { peerId: detail.senderPeerId || detail.peerId || "" },
+        }));
+      }
     });
     window.addEventListener("callme:fcm-call-accepted", (event) => {
       const peerId = event.detail?.peerId || "";

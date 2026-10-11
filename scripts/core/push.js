@@ -212,6 +212,9 @@
     answerCall: function (to, video) {
       var user = me();
       notify(to, "call-accepted", user, video ? "Panggilan video dijawab" : "Panggilan suara dijawab", { sender: user });
+      // Kirim jawaban lewat jalur data yang sudah dipakai chat juga. Ini
+      // membuat pemanggil bisa mulai WebRTC tanpa bergantung pada push balik.
+      window.CallMeP2P?.sendCallControl?.({ kind: "call-accepted" }, to);
     },
   });
 })();
