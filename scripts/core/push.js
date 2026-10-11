@@ -82,18 +82,18 @@
   async function registerBrowserPush() {
     if (!window.isSecureContext) throw new Error("Notifikasi perlu HTTPS atau localhost.");
     if (!("Notification" in window) || !("PushManager" in window)) throw new Error("Browser ini tidak mendukung Web Push.");
-    if (!WEB_PUSH_CONFIG.vapidPublicKey || !WEB_PUSH_CONFIG.firebase?.projectId || !WEB_PUSH_CONFIG.firebase?.messagingSenderId || !WEB_PUSH_CONFIG.firebase?.appId || !WEB_PUSH_CONFIG.firebase?.apiKey) throw new Error("Konfigurasi Firebase Web dan VAPID belum diisi.");
+    if (!WEB_PUSH_CONFIG.vapidPublicKey || !WEB_PUSH_CONFIG.projectId || !WEB_PUSH_CONFIG.messagingSenderId || !WEB_PUSH_CONFIG.appId || !WEB_PUSH_CONFIG.apiKey) throw new Error("Konfigurasi Firebase Web dan VAPID belum diisi.");
     var user = me();
     if (!user || !sessionStorage.getItem("callme-v2-session-token")) throw new Error("Masuk dahulu sebelum mengaktifkan notifikasi.");
     if (Notification.permission === "denied") throw new Error("Izin notifikasi diblokir. Izinkan CallMe dari pengaturan situs browser.");
     var permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
     if (permission !== "granted") throw new Error("Izin notifikasi tidak diberikan.");
 
-    window.CALLME_FIREBASE_CONFIG = WEB_PUSH_CONFIG.firebase;
+    window.CALLME_FIREBASE_CONFIG = WEB_PUSH_CONFIG;
     var worker = await ensureWorker();
     var appSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
     var messagingSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js");
-    var app = appSdk.getApps().length ? appSdk.getApp() : appSdk.initializeApp(WEB_PUSH_CONFIG.firebase);
+    var app = appSdk.getApps().length ? appSdk.getApp() : appSdk.initializeApp(WEB_PUSH_CONFIG);
     if (!messagingSdk.isSupported || !(await messagingSdk.isSupported())) throw new Error("FCM Web tidak didukung browser ini.");
     var token = await messagingSdk.getToken(messagingSdk.getMessaging(app), { vapidKey: WEB_PUSH_CONFIG.vapidPublicKey, serviceWorkerRegistration: worker });
     if (!token) throw new Error("Firebase tidak memberikan token untuk browser ini.");
@@ -113,11 +113,11 @@
     if (!user || !sessionStorage.getItem("callme-v2-session-token") || !("Notification" in window) || Notification.permission !== "granted") return Promise.resolve(false);
     if (tokenRefreshPromise) return tokenRefreshPromise;
     tokenRefreshPromise = ensureWorker().then(async function (worker) {
-      if (!WEB_PUSH_CONFIG.vapidPublicKey || !WEB_PUSH_CONFIG.firebase?.projectId) return false;
-      window.CALLME_FIREBASE_CONFIG = WEB_PUSH_CONFIG.firebase;
+      if (!WEB_PUSH_CONFIG.vapidPublicKey || !WEB_PUSH_CONFIG.projectId) return false;
+      window.CALLME_FIREBASE_CONFIG = WEB_PUSH_CONFIG;
       var appSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
       var messagingSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js");
-      var app = appSdk.getApps().length ? appSdk.getApp() : appSdk.initializeApp(WEB_PUSH_CONFIG.firebase);
+      var app = appSdk.getApps().length ? appSdk.getApp() : appSdk.initializeApp(WEB_PUSH_CONFIG);
       var token = await messagingSdk.getToken(messagingSdk.getMessaging(app), { vapidKey: WEB_PUSH_CONFIG.vapidPublicKey, serviceWorkerRegistration: worker });
       if (!token) return false;
       return fetch(ENDPOINT, {
