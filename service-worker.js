@@ -1,8 +1,9 @@
 /* Firebase Cloud Messaging background handler. */
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js");
+importScripts("./push-config.js");
 
-var messagingConfig = self.CALLME_FIREBASE_CONFIG || {
+var messagingConfig = self.CALLME_WEB_PUSH || {
   apiKey: "AIzaSyB8xTjyVdeUjPHJSpxrNuXsW83onzhfcHY",
   authDomain: "callme-99.firebaseapp.com",
   projectId: "callme-99",
