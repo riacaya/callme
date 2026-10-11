@@ -47,12 +47,21 @@
   }
 
   let notificationRoutePromise = null;
+  const logNotificationRoute = (message, peer, detail = "") => {
+    const target = String(peer || "").replace(/^cm-/i, "").toLowerCase();
+    void window.CallMeEventLog?.log?.("Notifikasi", message, [target, detail].filter(Boolean).join(" · "));
+  };
   async function routeNotification(detail) {
     if (notificationRoutePromise) return notificationRoutePromise;
     const peer = String(detail?.sender || "").replace(/^cm-/i, "").toLowerCase();
-    if (!peer) return false;
+    if (!peer) {
+      logNotificationRoute("Klik notifikasi tanpa ID pengirim");
+      return false;
+    }
+    logNotificationRoute(detail.kind === "call" ? "Klik notifikasi panggilan" : "Klik notifikasi pesan", peer);
     notificationRoutePromise = (async () => {
-      const deadline = Date.now() + 30000;
+      // Beri waktu sampai batas panggilan untuk masuk/login setelah membuka notifikasi.
+      const deadline = Date.now() + 60000;
       while (Date.now() < deadline) {
         const user = sessionStorage.getItem("callme-v2-session-user");
         const token = sessionStorage.getItem("callme-v2-session-token");
@@ -68,9 +77,11 @@
                 await new Promise((resolve) => setTimeout(resolve, 250));
               if (!window.CallMeP2P?.isPeerReady?.()) {
                 window.__callmeAutoAnswerPending = false;
+                logNotificationRoute("Jawaban tidak dikirim: PeerJS belum siap", peer);
                 return false;
               }
               window.CallMePush?.answerCall?.(peer, Boolean(detail.video));
+              logNotificationRoute("Jawaban otomatis dikirim; menunggu panggilan P2P", peer);
             } else {
               const contacts = (await window.CallMeStorage.all("contacts")) || [];
               const contact = contacts.find((row) => normalize(row.peerId) === normalize(peer)) || { peerId: peer, display_name: peer };
@@ -82,11 +93,13 @@
             return true;
           } catch (error) {
             console.warn("Gagal membuka chat dari notifikasi", error);
+            logNotificationRoute("Notifikasi gagal diproses", peer, error?.message || "error");
             return false;
           }
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
+      logNotificationRoute("Notifikasi tidak diproses: sesi atau penyimpanan belum siap", peer);
       return false;
     })().finally(() => { notificationRoutePromise = null; });
     return notificationRoutePromise;

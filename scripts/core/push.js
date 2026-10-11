@@ -124,6 +124,7 @@
     var result = await response.json();
     if (!result || !result.ok) throw new Error(result && result.error || "Pendaftaran push browser gagal.");
     localStorage.setItem("callme-web-push-peer", bare(user));
+    localStorage.setItem("callme-web-push-token", token);
     return token;
   }
 
@@ -146,7 +147,10 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "push-register", peerId: bare(user), webToken: token }),
       }).then(function (response) { return response.json(); }).then(function (result) {
-        if (result && result.ok) localStorage.setItem("callme-web-push-peer", bare(user));
+        if (result && result.ok) {
+          localStorage.setItem("callme-web-push-peer", bare(user));
+          localStorage.setItem("callme-web-push-token", token);
+        }
         return Boolean(result && result.ok);
       });
     }).catch(function (error) {
@@ -159,11 +163,36 @@
   async function disableBrowserPush() {
     if (!("serviceWorker" in navigator)) return false;
     var worker = await ensureWorker();
-    var subscription = await worker.pushManager.getSubscription();
-    if (!subscription) return false;
-    var result = await subscription.unsubscribe();
+    if (tokenRefreshPromise) await tokenRefreshPromise;
+    var peerId = localStorage.getItem("callme-web-push-peer") || bare(me());
+    var webToken = localStorage.getItem("callme-web-push-token") || "";
+    var messagingSdk = null;
+    var messaging = null;
+    if (!peerId) return false;
+    if (WEB_PUSH_CONFIG.vapidPublicKey && WEB_PUSH_CONFIG.projectId && WEB_PUSH_CONFIG.apiKey) {
+      var appSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+      messagingSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js");
+      var app = appSdk.getApps().length ? appSdk.getApp() : appSdk.initializeApp(WEB_PUSH_CONFIG);
+      messaging = messagingSdk.getMessaging(app);
+      if (!webToken) webToken = await messagingSdk.getToken(messaging, { vapidKey: WEB_PUSH_CONFIG.vapidPublicKey, serviceWorkerRegistration: worker });
+    }
+    if (!webToken) return false;
+    var response = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "push-unregister", peerId: peerId, webToken: webToken }),
+    });
+    var result = await response.json();
+    if (!result || !result.ok) throw new Error(result && result.error || "Pendaftaran push browser gagal dicabut.");
+    if (messagingSdk && messaging) {
+      await messagingSdk.deleteToken(messaging);
+    } else {
+      var subscription = await worker.pushManager.getSubscription();
+      if (subscription) await subscription.unsubscribe();
+    }
     localStorage.removeItem("callme-web-push-peer");
-    return result;
+    localStorage.removeItem("callme-web-push-token");
+    return true;
   }
 
   window.addEventListener("callme:session-user", function () { void refreshBrowserPush(); });
@@ -212,8 +241,7 @@
     answerCall: function (to, video) {
       var user = me();
       notify(to, "call-accepted", user, video ? "Panggilan video dijawab" : "Panggilan suara dijawab", { sender: user });
-      // Kirim jawaban lewat jalur data yang sudah dipakai chat juga. Ini
-      // membuat pemanggil bisa mulai WebRTC tanpa bergantung pada push balik.
+      // Jalur konfirmasi P2P melengkapi FCM bila tab pemanggil sedang aktif.
       window.CallMeP2P?.sendCallControl?.({ kind: "call-accepted" }, to);
     },
   });
