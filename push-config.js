@@ -1,5 +1,5 @@
 /* Copy the values from push-config.example.js and keep this file out of Git. */
-window.CALLME_WEB_PUSH = {
+self.CALLME_WEB_PUSH = {
   apiKey: "AIzaSyB8xTjyVdeUjPHJSpxrNuXsW83onzhfcHY",
   authDomain: "callme-99.firebaseapp.com",
   projectId: "callme-99",
