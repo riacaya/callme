@@ -85,6 +85,11 @@
     });
     panel.querySelector("[data-logout]")?.addEventListener("click", () => {
       window.CallMeP2P?.stop();
+      // Cabut token push browser dari relay sebelum sesi lokal dihapus.
+      // Kegagalan jaringan dicatat; akun tetap logout.
+      void window.CallMePush?.disableBrowser?.().catch((error) => {
+        console.warn("Pencabutan notifikasi browser gagal saat logout", error);
+      });
       sessionStorage.removeItem("callme-v2-session-user");
       sessionStorage.removeItem("callme-v2-session-token");
       localStorage.removeItem("callme-v2-persistent-session");
