@@ -315,10 +315,11 @@
       const log = await createCallLog(target, mode, "outgoing");
       if (callSession !== session) return;
       session.logId = log?.id || null;
-      // Satu-satunya deteksi sebelum panggilan: koneksi data PeerJS aktif.
-      // Jika aktif, langsung satu P2P. Jika tidak, jangan mulai P2P;
-      // kirim FCM dan tunggu Jawab/Tolak.
-      if (window.CallMeP2P?.isConnected?.(target)) {
+      // Minta jawaban status pada koneksi yang aktif. Timeout berarti tidur/
+      // tidak terjangkau dan FCM menjadi mekanisme bangun.
+      const awake = await window.CallMeP2P?.probe?.(target, 1200);
+      if (callSession !== session || callEnded) return;
+      if (awake) {
         void startOutgoingP2P(mode, target, session);
       } else {
         session.waitingForAnswer = true;
@@ -413,11 +414,6 @@
       if (detail.kind === "call-hangup") {
         finish(false);
         return;
-      }
-      if (detail.kind === "call-accepted" || detail.kind === "call-declined") {
-        window.dispatchEvent(new CustomEvent(`callme:fcm-${detail.kind}`, {
-          detail: { peerId: detail.senderPeerId || detail.peerId || "" },
-        }));
       }
     });
     window.addEventListener("callme:fcm-call-accepted", (event) => {
