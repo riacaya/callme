@@ -80,7 +80,7 @@
                 logNotificationRoute("Jawaban tidak dikirim: PeerJS belum siap", peer);
                 return false;
               }
-              window.CallMePush?.answerCall?.(peer, Boolean(detail.video));
+              window.CallMePush?.answerCall?.(peer, Boolean(detail.video), detail.callId || "");
               logNotificationRoute("Jawaban otomatis dikirim; menunggu panggilan P2P", peer);
             } else {
               const contacts = (await window.CallMeStorage.all("contacts")) || [];
@@ -88,7 +88,7 @@
               await chat.open(contact);
             }
             const url = new URL(window.location.href);
-            ["cmOpenPeer", "cmNotificationKind", "cmAcceptCall", "cmCallMode"].forEach((key) => url.searchParams.delete(key));
+            ["cmOpenPeer", "cmNotificationKind", "cmAcceptCall", "cmCallMode", "cmCallId"].forEach((key) => url.searchParams.delete(key));
             history.replaceState(null, "", url.pathname + url.search + url.hash);
             return true;
           } catch (error) {
@@ -133,6 +133,7 @@
       kind: params.get("cmNotificationKind") || "message",
       acceptCall: params.get("cmAcceptCall") === "1",
       video: params.get("cmCallMode") === "video",
+      callId: params.get("cmCallId") || "",
     });
   });
 
@@ -194,6 +195,7 @@
           kind: params.get("cmNotificationKind") || "message",
           acceptCall: params.get("cmAcceptCall") === "1",
           video: params.get("cmCallMode") === "video",
+      callId: params.get("cmCallId") || "",
         });
       }
       return;
