@@ -266,6 +266,7 @@
         attempt.on("stream", (incoming) => {
           if (callEnded || callSession !== session || currentCall !== attempt) return;
           remoteReceived = true;
+          if (session.connectTimer) clearTimeout(session.connectTimer);
           bindRemoteStream(remote, incoming, status);
         });
         attempt.on("close", () => {
@@ -276,6 +277,13 @@
           status.textContent = "Panggilan gagal";
           finish(false);
         });
+        attempt.on("iceStateChanged", (state) => {
+          if (callSession !== session || currentCall !== attempt) return;
+          if (state === "disconnected" || state === "failed") {
+            status.textContent = "Koneksi terputus";
+            finish(false);
+          }
+        });
         // PeerJS MediaConnection yang berhasil dibuat belum berarti lawan
         // menerima panggilan. Jangan biarkan UI/sesi lama terlihat hidup.
         session.connectTimer = setTimeout(() => {
@@ -283,7 +291,7 @@
             status.textContent = "Tidak ada jawaban";
             finish(false);
           }
-        }, 45000);
+        }, 8000);
       } catch (error) {
         status.textContent = "Media gagal: " + (error?.name || "error");
       }
@@ -332,7 +340,8 @@
       session.logId = log?.id || null;
       // Minta jawaban status pada koneksi yang aktif. Timeout berarti tidur/
       // tidak terjangkau dan FCM menjadi mekanisme bangun.
-      const awake = await window.CallMeP2P?.probe?.(target, 3000);
+      const awake = window.CallMeP2P?.isConnected?.(target) ||
+        await window.CallMeP2P?.probe?.(target, 1200);
       if (callSession !== session || callEnded) return;
       if (awake) {
         void startOutgoingP2P(mode, target, session);
@@ -411,13 +420,24 @@
           currentCall = incoming;
           incoming.on("stream", (received) => {
             if (callEnded || callSession !== session || currentCall !== incoming) return;
+            remoteReceived = true;
+            if (session.connectTimer) clearTimeout(session.connectTimer);
             bindRemoteStream(remote, received, status);
           });
+          session.connectTimer = setTimeout(() => {
+            if (callSession === session && currentCall === incoming && !remoteReceived) finish(false);
+          }, 8000);
           incoming.answer(localStream);
           window.CallMeAndroid?.answeredCall?.();
           status.textContent = "Menghubungkan...";
-          incoming.on("close", () => finish(false));
-          incoming.on("error", () => { status.textContent = "Panggilan gagal"; });
+          incoming.on("close", () => {
+            if (callSession === session && currentCall === incoming) finish(false);
+          });
+          incoming.on("error", () => { status.textContent = "Panggilan gagal"; finish(false); });
+          incoming.on("iceStateChanged", (state) => {
+            if (callSession !== session || currentCall !== incoming) return;
+            if (state === "disconnected" || state === "failed") finish(false);
+          });
         } catch (error) {
           status.textContent = "Panggilan gagal: " + (error?.name || "error");
           try { incoming.close(); } catch {}
