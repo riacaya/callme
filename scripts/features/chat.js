@@ -97,16 +97,6 @@
     window.addEventListener("callme:file-queued", (event) => {
       const name = event.detail?.name || "file";
       const mode = event.detail?.mode;
-      if (activeFriend?.peerId && !window.CallMeP2P?.isConnected?.(activeFriend.peerId)) {
-        const kind = mode === "voice" ? "suara" : mode === "video-capture" ? "video" : (/\.(png|jpe?g|gif|webp)$/i.test(name) ? "gambar" : "file");
-        window.CallMePush?.notify?.(
-          activeFriend.peerId,
-          "media",
-          activeFriend.display_name || activeFriend.phone || activeFriend.peerId,
-          `Mengirim ${kind}: ${shortFileName(name)}`,
-          { roomId: roomKey(activeFriend.peerId), createdAt: Date.now(), pendingOnly: true, sender: sessionStorage.getItem("callme-v2-session-user") || "" },
-        );
-      }
       const text =
         mode === "video-capture"
           ? "Menyiapkan video..."
@@ -974,19 +964,8 @@
         // membuat pengguna menekan kirim dua kali.
         render(row);
         tone(true);
-        const p2pReady = Boolean(window.CallMeP2P?.isConnected?.(activeFriend.peerId));
-        if (!p2pReady) {
-          // PeerJS tujuan tidak aktif: FCM langsung, tanpa menunggu ACK P2P.
-          window.CallMePush?.notify?.(
-            activeFriend.peerId, "message",
-            activeFriend.display_name || activeFriend.phone || activeFriend.peerId,
-            value,
-            { id: row.id, roomId: row.roomId, createdAt: row.createdAt, pendingOnly: true, sender: sessionStorage.getItem("callme-v2-session-user") || "" },
-          );
-        }
-        // Push isi hanya CADANGAN (antrean FCM + notifikasi) bila koneksi
-        // tidak pernah terbuka; meta row ikut dikirim supaya pesan tetap
-        // tersimpan di chatroom penerima saat aplikasinya bangun.
+        // Simpan dahulu agar event P2P yang muncul saat probe tidak
+        // melewatkan antrean pesan ini.
         try {
           await window.CallMeStorage?.put?.("messages", row);
         } catch (error) {
@@ -997,18 +976,38 @@
             }),
           );
         }
-        if (p2pReady) {
-          const ackPromise = waitForAck(row.id);
-          const sent = await window.CallMeP2P?.send?.(row, activeFriend.peerId);
-          const acked = sent && await ackPromise;
-          if (acked) {
-            row.deliveryStatus = "delivered";
-            await window.CallMeStorage?.put?.("messages", row);
-          } else {
-            row.deliveryStatus = "sending";
-            await window.CallMeStorage?.put?.("messages", row);
-            await flushPendingMessages(activeFriend.peerId);
+        sendingMessageIds.add(row.id);
+        let p2pReady = false;
+        let acked = false;
+        try {
+          // Kanal baru juga diuji lewat presence sebelum memilih FCM.
+          p2pReady = Boolean(
+            await window.CallMeP2P?.probe?.(activeFriend.peerId, 3000),
+          );
+          if (p2pReady) {
+            const ackPromise = waitForAck(row.id);
+            const sent = await window.CallMeP2P?.send?.(row, activeFriend.peerId);
+            acked = sent && await ackPromise;
           }
+        } finally {
+          sendingMessageIds.delete(row.id);
+        }
+        if (!p2pReady) {
+          // Pemberitahuan ber-ID membangunkan penerima; isi tetap antre
+          // di pengirim dan dikirim lewat P2P saat koneksi kembali siap.
+          window.CallMePush?.notify?.(
+            activeFriend.peerId, "message",
+            activeFriend.display_name || activeFriend.phone || activeFriend.peerId,
+            value,
+            { id: row.id, roomId: row.roomId, createdAt: row.createdAt, pendingOnly: true, sender: sessionStorage.getItem("callme-v2-session-user") || "" },
+          );
+        } else if (acked) {
+          row.deliveryStatus = "delivered";
+          await window.CallMeStorage?.put?.("messages", row);
+        } else {
+          row.deliveryStatus = "sending";
+          await window.CallMeStorage?.put?.("messages", row);
+          await flushPendingMessages(activeFriend.peerId);
         }
         return true;
       } finally {
@@ -1017,6 +1016,7 @@
     }
     const flushingPending = new Set();
     const flushingPendingFiles = new Set();
+    const sendingMessageIds = new Set();
     async function flushPendingFiles(peerId) {
       const target = normalizePeer(peerId);
       if (!target || flushingPendingFiles.has(target) || !window.CallMeFileTransfer?.retry) return;
@@ -1043,11 +1043,17 @@
           .sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
         for (const row of pendingRows) {
           if (!window.CallMeP2P?.isConnected?.(target)) break;
+          if (sendingMessageIds.has(row.id)) continue;
+          const latest = ((await window.CallMeStorage?.all?.("messages")) || [])
+            .find((item) => item.id === row.id);
+          if (!latest || latest.deliveryStatus === "delivered") continue;
           const ackPromise = waitForAck(row.id);
-          const sent = await window.CallMeP2P.send(row, target);
+          const sent = await window.CallMeP2P.send(latest, target);
           if (!sent) break;
           const acked = await ackPromise;
           if (!acked) break;
+          latest.deliveryStatus = "delivered";
+          await window.CallMeStorage?.put?.("messages", latest);
         }
       } finally {
         flushingPending.delete(target);
