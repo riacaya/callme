@@ -827,6 +827,14 @@
       if (existing) {
         // Pengiriman ulang dengan ID yang sama bersifat idempoten: jangan
         // merender pesan kedua, tetapi selalu balas ACK agar pengirim pulih.
+        // Transport menyimpan teks/call-log sebelum memancarkan event. Karena
+        // itu baris tersimpan belum tentu sudah ada di DOM room yang sedang
+        // dibuka; render yang hilang sambil tetap mencegah bubble ganda.
+        if (
+          data.kind !== "call-log" &&
+          row.roomId === roomKey(activeFriend.peerId) &&
+          !messages.querySelector(`[data-message-id="${CSS.escape(row.id)}"]`)
+        ) render({ ...existing, ...row, mine: existing.mine });
         if (data?.id && data.kind !== "media" && data.kind !== "audio") {
           const ack = { kind: "message-ack", id: data.id };
           window.CallMeP2P?.sendCallControl?.(ack, data.senderPeerId);
