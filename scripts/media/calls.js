@@ -276,6 +276,8 @@
       }
     };
     async function open(mode) {
+      // Abaikan ketukan berulang selama satu sesi panggilan sedang berjalan.
+      if (!callEnded || callSession) return;
       const view = panel(mode),
         local =
           mode === "video"
@@ -317,14 +319,14 @@
       session.logId = log?.id || null;
       // Minta jawaban status pada koneksi yang aktif. Timeout berarti tidur/
       // tidak terjangkau dan FCM menjadi mekanisme bangun.
-      const awake = await window.CallMeP2P?.probe?.(target, 1200);
+      const awake = await window.CallMeP2P?.probe?.(target, 3000);
       if (callSession !== session || callEnded) return;
       if (awake) {
         void startOutgoingP2P(mode, target, session);
       } else {
         session.waitingForAnswer = true;
         status.textContent = "Menunggu jawaban...";
-        window.CallMePush?.call?.(target, mode === "video");
+        window.CallMePush?.call?.(target, mode === "video", session.logId);
         callSession.answerTimer = setTimeout(() => {
           if (callSession !== session || !session.waitingForAnswer) return;
           session.waitingForAnswer = false;
@@ -421,6 +423,9 @@
       if (callSession?.kind !== "outgoing" || !callSession.waitingForAnswer ||
           String(peerId).replace(/^cm-/i, "").toLowerCase() !==
           String(callSession.peerId).replace(/^cm-/i, "").toLowerCase()) return;
+      if (event.detail?.callId && callSession.logId && event.detail.callId !== callSession.logId) return;
+      if (callSession.acceptResponseHandled) return;
+      callSession.acceptResponseHandled = true;
       callSession.waitingForAnswer = false;
       if (callSession.logId) void updateCallLog(callSession.logId, peerId, "accepted");
       void startOutgoingP2P(callSession.mode, callSession.peerId, callSession);
@@ -430,6 +435,7 @@
       if (callSession?.kind !== "outgoing" || !callSession.waitingForAnswer ||
           String(peerId).replace(/^cm-/i, "").toLowerCase() !==
           String(callSession.peerId).replace(/^cm-/i, "").toLowerCase()) return;
+      if (event.detail?.callId && callSession.logId && event.detail.callId !== callSession.logId) return;
       callSession.waitingForAnswer = false;
       if (callSession.answerTimer) clearTimeout(callSession.answerTimer);
       if (callSession.logId) void updateCallLog(callSession.logId, peerId, "rejected");
