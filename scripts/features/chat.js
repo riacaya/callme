@@ -834,7 +834,16 @@
         }
         return;
       }
-      if (existing) return;
+      if (existing) {
+        // Pengiriman ulang dengan ID yang sama bersifat idempoten: jangan
+        // merender pesan kedua, tetapi selalu balas ACK agar pengirim pulih.
+        if (data?.id && data.kind !== "media" && data.kind !== "audio") {
+          const ack = { kind: "message-ack", id: data.id };
+          window.CallMeP2P?.sendCallControl?.(ack, data.senderPeerId);
+          window.dispatchEvent(new CustomEvent("callme:message-ack", { detail: { id: data.id, peerId: data.senderPeerId } }));
+        }
+        return;
+      }
       render(row);
       // Ketukan pesan diterima (bukan catatan panggilan — panggilan sudah
       // punya bel notifikasi sendiri).
@@ -966,19 +975,7 @@
         render(row);
         tone(true);
         const p2pReady = Boolean(window.CallMeP2P?.isConnected?.(activeFriend.peerId));
-        if (p2pReady) {
-          const ackPromise = waitForAck(row.id);
-          await window.CallMeP2P?.send?.(row, activeFriend.peerId);
-          ackPromise.then((acked) => {
-            if (!acked)
-              window.CallMePush?.notify?.(
-                activeFriend.peerId, "message",
-                activeFriend.display_name || activeFriend.phone || activeFriend.peerId,
-                value,
-                { id: row.id, roomId: row.roomId, createdAt: row.createdAt, pendingOnly: true, sender: sessionStorage.getItem("callme-v2-session-user") || "" },
-              );
-          });
-        } else {
+        if (!p2pReady) {
           // PeerJS tujuan tidak aktif: FCM langsung, tanpa menunggu ACK P2P.
           window.CallMePush?.notify?.(
             activeFriend.peerId, "message",
@@ -999,6 +996,19 @@
               detail: { id: row.id, name: "pesan" },
             }),
           );
+        }
+        if (p2pReady) {
+          const ackPromise = waitForAck(row.id);
+          const sent = await window.CallMeP2P?.send?.(row, activeFriend.peerId);
+          const acked = sent && await ackPromise;
+          if (acked) {
+            row.deliveryStatus = "delivered";
+            await window.CallMeStorage?.put?.("messages", row);
+          } else {
+            row.deliveryStatus = "sending";
+            await window.CallMeStorage?.put?.("messages", row);
+            await flushPendingMessages(activeFriend.peerId);
+          }
         }
         return true;
       } finally {
@@ -1033,9 +1043,10 @@
           .sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
         for (const row of pendingRows) {
           if (!window.CallMeP2P?.isConnected?.(target)) break;
+          const ackPromise = waitForAck(row.id);
           const sent = await window.CallMeP2P.send(row, target);
           if (!sent) break;
-          const acked = await waitForAck(row.id);
+          const acked = await ackPromise;
           if (!acked) break;
         }
       } finally {
