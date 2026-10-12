@@ -19,7 +19,11 @@
     if (!buttons.length) return;
     buttons.forEach((button) => {
       button.hidden = false;
-      button.textContent = "Install APK";
+      const icon = document.createElement("span");
+      icon.className = "setting-icon";
+      icon.textContent = "📲";
+      icon.setAttribute("aria-hidden", "true");
+      button.replaceChildren(icon, document.createTextNode("Install APK"));
       button.onclick = () => window.open(apkUrl, "_blank", "noopener");
     });
   });
