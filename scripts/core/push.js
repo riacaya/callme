@@ -15,11 +15,11 @@
       var data = payload?.data || {};
       if (data.kind === "call-accepted" || data.kind === "call-declined") {
         window.dispatchEvent(new CustomEvent("callme:fcm-" + data.kind, {
-          detail: { peerId: data.sender || data.title || "" },
+          detail: { peerId: data.sender || data.title || "", callId: data.id || "" },
         }));
-      } else if ((data.kind === "message" || data.kind === "call") && Notification.permission === "granted") {
+      } else if ((data.kind === "message" || data.kind === "media" || data.kind === "call") && Notification.permission === "granted") {
         var title = data.title || "CallMe";
-        var options = { body: data.body || "", icon: "./assets/logo-192.png", data: { url: new URL("./", window.location.href).href, sender: data.sender || "", kind: data.kind || "message", video: /video/i.test(data.body || "") } };
+        var options = { body: data.body || "", icon: "./assets/logo-192.png", data: { url: new URL("./", window.location.href).href, sender: data.sender || "", recipient: data.recipient || "", callId: data.id || "", kind: data.kind || "message", video: /video/i.test(data.body || "") } };
         void ensureWorker().then(function (worker) { return worker.showNotification(title, options); });
       }
     });
@@ -227,7 +227,7 @@
       notify(to, "message", me(), text, meta);
     },
     // Panggilan masuk membangunkan aplikasi tidur dengan pilihan Jawab/Tolak.
-    call: function (to, video) {
+    call: function (to, video, callId) {
       var user = me();
       var name = myDisplayName();
       notify(
@@ -235,12 +235,12 @@
         "call",
         name,
         (video ? "Panggilan video" : "Panggilan suara") + " dari " + name,
-        { sender: user },
+        { sender: user, id: callId || "" },
       );
     },
-    answerCall: function (to, video) {
+    answerCall: function (to, video, callId) {
       var user = me();
-      notify(to, "call-accepted", user, video ? "Panggilan video dijawab" : "Panggilan suara dijawab", { sender: user });
+      notify(to, "call-accepted", user, video ? "Panggilan video dijawab" : "Panggilan suara dijawab", { sender: user, id: callId || "" });
       // Jalur konfirmasi P2P melengkapi FCM bila tab pemanggil sedang aktif.
       window.CallMeP2P?.sendCallControl?.({ kind: "call-accepted" }, to);
     },
