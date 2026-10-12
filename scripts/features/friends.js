@@ -17,8 +17,30 @@
     });
     window.addEventListener("callme:peer-server-status", (event) => {
       const status = document.getElementById("p2p-status");
-      if (status) status.textContent = event.detail?.status === "online" ? "P2P ready" : "Mencari...";
+      if (!status) return;
+      const labels = {
+        online: "P2P ready",
+        connecting: "Menghubungi server...",
+        conflict: "ID akun sedang dipakai di sesi lain",
+        unavailable: "PeerJS tidak tersedia",
+        timeout: "Server P2P tidak merespons",
+        offline: "Koneksi P2P terputus, mencoba lagi...",
+      };
+      status.textContent = labels[event.detail?.status] || "Mencari...";
     });
+    const currentPeerStatus = window.CallMeP2P?.getStatus?.();
+    const initialStatus = document.getElementById("p2p-status");
+    if (initialStatus) {
+      const labels = {
+        online: "P2P ready",
+        connecting: "Menghubungi server...",
+        conflict: "ID akun sedang dipakai di sesi lain",
+        unavailable: "PeerJS tidak tersedia",
+        timeout: "Server P2P tidak merespons",
+        offline: "Koneksi P2P terputus, mencoba lagi...",
+      };
+      initialStatus.textContent = labels[currentPeerStatus] || "Mencari...";
+    }
     window.addEventListener("callme:profile-updated", () =>
       load(query.value.trim()),
     );
