@@ -291,6 +291,8 @@
         next.send({
           kind: "presence-pong",
           awake: visible,
+          // Hanya layar login berarti pengguna belum masuk. Tampilan friends
+          // adalah kondisi normal saat aplikasi aktif dan siap menerima call.
           active: visible && (typeof window.CallMeApp?.current !== "function" || window.CallMeApp.current() !== "login"),
         });
         return;
