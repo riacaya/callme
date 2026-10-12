@@ -113,25 +113,52 @@
     }
     if (!Number.isFinite(file?.size) || file.size <= 0)
       throw new Error("File kosong atau tidak dapat dibaca browser");
+    if (existingRow?.id) {
+      const saved = ((await window.CallMeStorage?.all?.("messages")) || [])
+        .find((item) => item.id === existingRow.id);
+      if (saved?.deliveryStatus === "delivered") return true;
+    }
 
     const mime = inferMime(file);
     const audio = mime.startsWith("audio/");
-    const source = await readDataUrl(file);
     const row = existingRow || {
       id: window.CallMeApp?.uid?.() || `media-${Date.now()}`,
       kind: audio ? "audio" : "media",
       roomId: room,
       name: file.name || "lampiran",
       mime,
-      source,
-      audio: audio ? source : undefined,
+      source: existingRow?.source || "",
+      audio: audio ? existingRow?.audio || existingRow?.source || "" : undefined,
       mine: true,
       deliveryStatus: "sending",
       createdAt: Date.now(),
     };
+    // Isi file tetap melalui P2P; FCM hanya memberi tahu/membangunkan
+    // penerima saat pemeriksaan presence menyatakan perangkat sedang tidur.
+    const awake = await window.CallMeP2P?.probe?.(peer, 3000);
+    if (!awake) {
+      const sender = sessionStorage.getItem("callme-v2-session-user") || "";
+      const label = audio
+        ? "pesan suara"
+        : mime.startsWith("image/")
+          ? "gambar"
+          : mime.startsWith("video/")
+            ? "video"
+            : "file";
+      window.CallMePush?.notify?.(
+        peer,
+        "media",
+        sender || "CallMe",
+        `${label} ${row.name} dari ${sender || "CallMe"}`,
+        { id: row.id, roomId: room, createdAt: row.createdAt, sender },
+      );
+    }
+    const source = await readDataUrl(file);
+    row.source = source;
+    if (audio) row.audio = source;
     if (!existingRow) {
       window.CallMeChat?.render?.(row);
-      void persist(row);
+      await persist(row);
     }
 
     // Semua file memakai jalur dan ukuran chunk yang sama. Mode hanya
