@@ -15,16 +15,10 @@
       updateUserLabel();
       void load(query.value.trim());
     });
-    const updatePeerServerStatus = (peerStatus) => {
-      const status = document.getElementById("p2p-status");
-      if (status) status.textContent = peerStatus === "online" ? "P2P ready" : "Mencari...";
-    };
     window.addEventListener("callme:peer-server-status", (event) => {
-      updatePeerServerStatus(event.detail?.status);
+      const status = document.getElementById("p2p-status");
+      if (status) status.textContent = event.detail?.status === "online" ? "P2P ready" : "Mencari...";
     });
-    // Reconcile after registering the listener in case PeerJS opened before
-    // this DOMContentLoaded handler attached its status listener.
-    updatePeerServerStatus(window.CallMeP2P?.isPeerReady?.() ? "online" : "connecting");
     window.addEventListener("callme:profile-updated", () =>
       load(query.value.trim()),
     );
