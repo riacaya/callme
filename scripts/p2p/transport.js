@@ -269,6 +269,7 @@
       void retry();
     };
     next.on("open", () => {
+      if (connections.get(next.peer) !== next) return;
       const self = normalizePeerIdentity(
         sessionStorage.getItem("callme-v2-session-user") ||
           localStorage.getItem("callme-v2-user") ||
@@ -286,6 +287,7 @@
       pending.delete(next.peer);
     });
     next.on("data", (data) => {
+      if (connections.get(next.peer) !== next) return;
       if (data?.kind === "presence-ping") {
         const visible = document.visibilityState !== "hidden";
         next.send({
@@ -318,6 +320,7 @@
           try {
             next.send({ type: "hello-ack", user: self, room });
           } catch {}
+        try { next.send({ kind: "presence-ping" }); } catch {}
         window.dispatchEvent(
           new CustomEvent("callme:p2p-status", {
             detail: { peerId: next.peer, status: "online" },
@@ -550,6 +553,7 @@
       // Event dari koneksi lama tidak boleh menimpa status koneksi pengganti.
       if (connections.get(next.peer) !== next) return;
       connections.delete(next.peer);
+      routeByPeer.delete(next.peer);
       for (const [id, waiter] of ackWaiters) {
         if (waiter.peerId !== next.peer) continue;
         clearTimeout(waiter.timer);
@@ -566,6 +570,7 @@
     // mengirim event close bila DataConnection benar-benar berakhir; hanya
     // close yang boleh memicu pencarian ulang.
     next.on("error", (error) => {
+      if (connections.get(next.peer) !== next) return;
       readyConnections.delete(next);
       window.dispatchEvent(
         new CustomEvent("callme:p2p-error", {
@@ -581,6 +586,7 @@
     const id = `cm-${identity}`,
       existing = connections.get(id);
     if (existing?.open) {
+      if (!readyConnections.has(existing)) return existing;
       try {
         existing.send({ kind: "presence-ping" });
       } catch {}
@@ -603,7 +609,7 @@
               },
             }),
           );
-        }, 3500),
+        }, 10000),
       );
       return existing;
     }
@@ -682,9 +688,12 @@
     const identity = normalizePeerIdentity(peerId), target = `cm-${identity}`;
     if (!identity) return false;
     const existing = connections.get(target);
-    if (existing?.open) {
+    if (existing?.open && readyConnections.has(existing)) {
       try { existing.send(data); return true; } catch {}
     }
+    // Hangup hanya berlaku untuk sesi yang masih berlangsung. Jangan antrekan
+    // untuk kanal berikutnya, karena dapat menutup panggilan selanjutnya.
+    if (data?.kind === "call-hangup") return false;
     const queue = pending.get(target) || [];
     queue.push(data);
     pending.set(target, queue);
@@ -695,6 +704,7 @@
     const identity = normalizePeerIdentity(peerId);
     const id = `cm-${identity}`;
     const connection = connections.get(id);
+    routeByPeer.delete(id);
     if (connection) connection.close();
     clearTimeout(presenceTimers.get(id));
     presenceTimers.delete(id);
