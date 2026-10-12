@@ -31,23 +31,23 @@
     { urls: "stun:stun.relay.metered.ca:80" },
     {
       urls: "turn:global.relay.metered.ca:80",
-      username: "REPLACE_WITH_SERVER_ISSUED_USERNAME",
-      credential: "REPLACE_WITH_SERVER_ISSUED_CREDENTIAL",
+      username: "466494188ac3580fb1c6df34",
+      credential: "f8Qc+SUXdyhuVIgB",
     },
     {
       urls: "turn:global.relay.metered.ca:80?transport=tcp",
-      username: "REPLACE_WITH_SERVER_ISSUED_USERNAME",
-      credential: "REPLACE_WITH_SERVER_ISSUED_CREDENTIAL",
+      username: "466494188ac3580fb1c6df34",
+      credential: "f8Qc+SUXdyhuVIgB",
     },
     {
       urls: "turn:global.relay.metered.ca:443",
-      username: "REPLACE_WITH_SERVER_ISSUED_USERNAME",
-      credential: "REPLACE_WITH_SERVER_ISSUED_CREDENTIAL",
+      username: "466494188ac3580fb1c6df34",
+      credential: "f8Qc+SUXdyhuVIgB",
     },
     {
       urls: "turns:global.relay.metered.ca:443?transport=tcp",
-      username: "REPLACE_WITH_SERVER_ISSUED_USERNAME",
-      credential: "REPLACE_WITH_SERVER_ISSUED_CREDENTIAL",
+      username: "466494188ac3580fb1c6df34",
+      credential: "f8Qc+SUXdyhuVIgB",
     },
   ];
   const normalizePeerIdentity = (value) =>
@@ -256,7 +256,12 @@
     });
     next.on("data", (data) => {
       if (data?.kind === "presence-ping") {
-        next.send({ kind: "presence-pong" });
+        const visible = document.visibilityState !== "hidden";
+        next.send({
+          kind: "presence-pong",
+          awake: visible,
+          active: visible && (typeof window.CallMeApp?.current !== "function" || window.CallMeApp.current() !== "login"),
+        });
         return;
       }
       if (data?.type === "hello" || data?.type === "hello-ack") {
@@ -294,7 +299,7 @@
         presenceTimers.delete(next.peer);
         window.dispatchEvent(
           new CustomEvent("callme:presence-pong", {
-            detail: { peerId: next.peer },
+            detail: { peerId: next.peer, awake: data.awake === true, active: data.active === true },
           }),
         );
         return;
@@ -431,15 +436,19 @@
         delete data.i;
         delete data.total;
         delete data.part;
-        try {
-          next.send({ kind: "file-complete-ack", id: data.id });
-        } catch {}
         const completedAtForCleanup = Date.now();
         completedFiles.set(data.id, completedAtForCleanup);
         setTimeout(() => {
           if (completedFiles.get(data.id) === completedAtForCleanup)
             completedFiles.delete(data.id);
         }, 300000);
+        const row = { ...data, senderPeerId: next.peer, mine: false, createdAt: data.createdAt || Date.now() };
+        const save = window.CallMeStorage?.put?.("messages", row);
+        const acknowledge = () => {
+          try { if (next.open) next.send({ kind: "file-complete-ack", id: data.id }); } catch {}
+        };
+        if (save && typeof save.then === "function") save.then(acknowledge, acknowledge);
+        else acknowledge();
       }
       if (data?.kind === "media-chunk") {
         const bucket = mediaParts.get(data.id) || {
@@ -485,17 +494,15 @@
       }
       if (data?.id && data.kind !== "media" && data.kind !== "audio") {
         const ack = { kind: "message-ack", id: data.id };
-        try {
-          next.send(ack);
-        } catch {}
-        // ACK akhir dikirim ulang untuk mengatasi buffer WebView yang sedang
-        // mengosongkan chunk terakhir file video.
-        if (data.type === undefined || data.kind === "file")
-          setTimeout(() => {
-            try {
-              if (next.open) next.send(ack);
-            } catch {}
-          }, 120);
+        const sendAck = () => {
+          try { if (next.open) next.send(ack); } catch {}
+        };
+        if (data.kind === "text" || data.kind === "call-log") {
+          const row = { ...data, senderPeerId: next.peer, mine: false, createdAt: data.createdAt || Date.now() };
+          const save = window.CallMeStorage?.put?.("messages", row);
+          if (save && typeof save.then === "function") save.then(sendAck, sendAck);
+          else sendAck();
+        } else sendAck();
       }
       const message = { ...data, senderPeerId: next.peer };
       window.dispatchEvent(
@@ -719,6 +726,30 @@
     const connection = connections.get(`cm-${identity}`);
     return Boolean(connection?.open && readyConnections.has(connection));
   }
+  function probe(peerId, timeout = 1200) {
+    const identity = normalizePeerIdentity(peerId), target = `cm-${identity}`;
+    const connection = connections.get(target);
+    if (!identity || !connection?.open || !readyConnections.has(connection))
+      return Promise.resolve(false);
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (active) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        window.removeEventListener("callme:presence-pong", onPong);
+        resolve(active);
+      };
+      const onPong = (event) => {
+        if (event.detail?.peerId !== target) return;
+        finish(event.detail.awake === true && event.detail.active === true);
+      };
+      const timer = setTimeout(() => finish(false), timeout);
+      window.addEventListener("callme:presence-pong", onPong);
+      try { connection.send({ kind: "presence-ping" }); }
+      catch { finish(false); }
+    });
+  }
   function hasConnection(peerId) {
     const identity = normalizePeerIdentity(peerId);
     const connection = connections.get(`cm-${identity}`);
@@ -816,6 +847,7 @@
       return peer?.id || null;
     },
     isConnected,
+    probe,
     hasConnection,
     isPeerReady,
     getRoute,

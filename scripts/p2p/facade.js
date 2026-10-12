@@ -14,6 +14,8 @@
     "on",
     "getId",
     "isConnected",
+    "probe",
+    "probe",
     "hasConnection",
     "isPeerReady",
   ];
