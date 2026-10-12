@@ -19,6 +19,16 @@
       element.playsInline = true;
       element.play?.().catch(() => {});
     };
+    const clearCallMedia = () => {
+      document.querySelectorAll('[data-panel="voice-call"] audio, [data-panel="video-call"] video')
+        .forEach((element) => {
+          const attached = element.srcObject;
+          if (attached && typeof attached.getTracks === "function")
+            attached.getTracks().forEach((track) => track.stop());
+          element.pause?.();
+          element.srcObject = null;
+        });
+    };
     const roomIdForPeer = (peerId) => {
       const localId = sessionStorage.getItem("callme-v2-session-user") ||
         localStorage.getItem("callme-v2-user") || "";
@@ -214,6 +224,7 @@
       } catch {}
       stream?.getTracks().forEach((track) => track.stop());
       stream = null;
+      clearCallMedia();
       setChatCallButtonsHidden(false);
       const hasActiveRoom = Boolean(window.CallMeChat?.activePeer?.());
       if (callWasProcessed && hasActiveRoom)
@@ -225,22 +236,26 @@
       view?.querySelector("[data-call-accept]")?.toggleAttribute("hidden", !incoming);
     };
     // P2P media dimulai setelah status penerima aktif atau setelah Jawab FCM.
-    const startOutgoingP2P = async (mode, target) => {
-      if (callEnded || callSession?.kind !== "outgoing" || callSession.peerId !== target) return;
+    const startOutgoingP2P = async (mode, target, session = callSession) => {
+      if (callEnded || callSession !== session || session?.kind !== "outgoing" || session.peerId !== target) return;
       const view = panel(mode),
         local = mode === "video" ? view?.querySelector("#video-local") : view?.querySelector("audio"),
         remote = mode === "video" ? view?.querySelector("#video-remote") : local,
         status = view?.querySelector('[id$="-call-status"]');
       if (!view || !local || !status) return;
       try {
-        stream = await captureLocalStream(mode, status);
-        if (callEnded || callSession?.peerId !== target) return;
-        setMediaSource(local, stream);
-        if (local !== remote) local.muted = true;
+        const localStream = await captureLocalStream(mode, status);
+        if (callEnded || callSession !== session) {
+          localStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        stream = localStream;
+        setMediaSource(local, localStream);
+        local.muted = true;
         status.textContent = "Menghubungkan...";
         const attempt = window.CallMeP2P?.call(target, stream, {
           video: mode === "video",
-          callLogId: callSession?.logId,
+          callLogId: session.logId,
         });
         if (!attempt) {
           status.textContent = "Panggilan gagal dimulai";
@@ -248,6 +263,7 @@
         }
         currentCall = attempt;
         attempt.on("stream", (incoming) => {
+          if (callEnded || callSession !== session || currentCall !== attempt) return;
           remoteReceived = true;
           bindRemoteStream(remote, incoming, status);
         });
@@ -271,7 +287,9 @@
       if (!view || !local || !target) return;
       callEnded = false;
       remoteReceived = false;
-      callSession = { kind: "outgoing", peerId: target, mode, returnPanel: "chatroom", accepted: true, logId: null };
+      const session = { kind: "outgoing", peerId: target, mode, returnPanel: "chatroom", accepted: true, logId: null };
+      callSession = session;
+      clearCallMedia();
       setChatCallButtonsHidden(true);
       window.CallMeApp.show(`${mode}-call`);
       const status = view.querySelector('[id$="-call-status"]'),
@@ -295,21 +313,21 @@
       // Buat ID log sebelum media/FCM dimulai supaya status Jawab/Tolak
       // selalu memperbarui baris yang sama di kedua sisi.
       const log = await createCallLog(target, mode, "outgoing");
-      if (callSession?.kind !== "outgoing" || callSession.peerId !== target) return;
-      callSession.logId = log?.id || null;
+      if (callSession !== session) return;
+      session.logId = log?.id || null;
       // Satu-satunya deteksi sebelum panggilan: koneksi data PeerJS aktif.
       // Jika aktif, langsung satu P2P. Jika tidak, jangan mulai P2P;
       // kirim FCM dan tunggu Jawab/Tolak.
       if (window.CallMeP2P?.isConnected?.(target)) {
-        void startOutgoingP2P(mode, target);
+        void startOutgoingP2P(mode, target, session);
       } else {
-        callSession.waitingForAnswer = true;
+        session.waitingForAnswer = true;
         status.textContent = "Menunggu jawaban...";
         window.CallMePush?.call?.(target, mode === "video");
         callSession.answerTimer = setTimeout(() => {
-          if (callSession?.kind !== "outgoing" || !callSession.waitingForAnswer) return;
-          callSession.waitingForAnswer = false;
-          if (callSession.logId) void updateCallLog(callSession.logId, target, "missed");
+          if (callSession !== session || !session.waitingForAnswer) return;
+          session.waitingForAnswer = false;
+          if (session.logId) void updateCallLog(session.logId, target, "missed");
           finish(false);
         }, 60000);
       }
@@ -342,18 +360,19 @@
         if (!pendingIncoming || button.dataset.callAccept !== pendingIncoming.mode)
           return;
         const { incoming, mode } = pendingIncoming;
-        if (callSession) callSession.accepted = true;
+        const session = callSession;
+        if (session) session.accepted = true;
         await activateCallRoom(incoming.peer || incoming.peerId);
-        if (pendingIncoming?.incoming !== incoming) return;
+        if (pendingIncoming?.incoming !== incoming || callSession !== session || callEnded) return;
         pendingIncoming = null;
-        if (callSession) callSession.accepted = true;
+        if (session) session.accepted = true;
         // Panggilan diterima → status log naik dari "started" ke "accepted"
         // (label "berhasil"). Tanpa ini status tetap "started" sehingga log
         // selamanya menampilkan fallback "Memanggil". Kiriman P2P memakai logId
         // yang sama, jadi baris pemanggil ikut terbarui — sama seperti jalur
         // "rejected" yang sudah menyentuh kedua sisi.
-        if (callSession?.logId)
-          void updateCallLog(callSession.logId, incoming.peer || incoming.peerId, "accepted");
+        if (session?.logId)
+          void updateCallLog(session.logId, incoming.peer || incoming.peerId, "accepted");
         const view = panel(mode),
           local = mode === "video" ? view?.querySelector("#video-local") : view?.querySelector("audio"),
           remote = mode === "video" ? view?.querySelector("#video-remote") : local,
@@ -364,12 +383,21 @@
         window.CallMeApp.show(`${mode}-call`);
         setChatCallButtonsHidden(true);
         try {
-          stream = await captureLocalStream(mode, status);
-          setMediaSource(local, stream);
-          if (local !== remote) local.muted = true;
+          const localStream = await captureLocalStream(mode, status);
+          if (callEnded || callSession !== session || !session) {
+            localStream.getTracks().forEach((track) => track.stop());
+            try { incoming.close(); } catch {}
+            return;
+          }
+          stream = localStream;
+          setMediaSource(local, localStream);
+          local.muted = true;
           currentCall = incoming;
-          incoming.on("stream", (received) => bindRemoteStream(remote, received, status));
-          incoming.answer(stream);
+          incoming.on("stream", (received) => {
+            if (callEnded || callSession !== session || currentCall !== incoming) return;
+            bindRemoteStream(remote, received, status);
+          });
+          incoming.answer(localStream);
           window.CallMeAndroid?.answeredCall?.();
           status.textContent = "Menghubungkan...";
           incoming.on("close", () => finish(false));
@@ -399,7 +427,7 @@
           String(callSession.peerId).replace(/^cm-/i, "").toLowerCase()) return;
       callSession.waitingForAnswer = false;
       if (callSession.logId) void updateCallLog(callSession.logId, peerId, "accepted");
-      void startOutgoingP2P(callSession.mode, callSession.peerId);
+      void startOutgoingP2P(callSession.mode, callSession.peerId, callSession);
     });
     window.addEventListener("callme:fcm-call-declined", (event) => {
       const peerId = event.detail?.peerId || "";
