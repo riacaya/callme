@@ -16,7 +16,7 @@
     });
     const settingIcons = new Map([
       ["Edit Profil", "👤"],
-      ["Install App", "📲"],
+      ["Install APK", "📲"],
       ["Bahasa", "🌐"],
       ["Senja", "🌅"],
       ["Natural", "🌿"],
