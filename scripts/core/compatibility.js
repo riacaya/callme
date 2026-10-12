@@ -267,22 +267,17 @@
         );
         return false;
       }
-      window.dispatchEvent(
-        new CustomEvent("callme:file-transfer-progress", {
-          detail: { id: row.id, name: row.name, sent: index + 1, total },
-        }),
-      );
+      if (index + 1 < total)
+        window.dispatchEvent(
+          new CustomEvent("callme:file-transfer-progress", {
+            detail: { id: row.id, name: row.name, sent: index + 1, total },
+          }),
+        );
       await wait(30);
     }
 
-    // Chunk terakhir sudah masuk antrean DataChannel. Tampilkan 100% upload
-    // sebelum menunggu ACK aplikasi dari penerima.
-    window.dispatchEvent(
-      new CustomEvent("callme:file-transfer-progress", {
-        detail: { id: row.id, name: row.name, sent: total, total },
-      }),
-    );
-    // 100% upload belum berarti file sudah tersusun di sisi penerima.
+    // Status selesai dan progres 100% hanya setelah penerima mengonfirmasi
+    // seluruh file tersusun dan tersimpan.
     const completed = await waitForCompleteAck();
     if (!completed) {
       window.dispatchEvent(
@@ -299,6 +294,11 @@
     }
     row.deliveryStatus = "delivered";
     await persist(row);
+    window.dispatchEvent(
+      new CustomEvent("callme:file-transfer-progress", {
+        detail: { id: row.id, name: row.name, sent: total, total },
+      }),
+    );
     window.dispatchEvent(
       new CustomEvent("callme:file-transfer-complete", {
         detail: { id: row.id, name: row.name, peerId: peer },
