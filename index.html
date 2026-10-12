@@ -136,7 +136,20 @@ audio.chat-media { width: min(100%, 360px); }
 .panel-chatroom .chat-item-media:has(>audio.chat-media) .chat-meta{position:static;display:block;margin:6px 2px 0;text-align:right;color:#fff}
 </style>
 <style></style>
-</head>
+<style>
+.panel-location{display:flex;flex-direction:column}
+.panel-location .panel-content{padding:10px 12px;font-size:14px}
+.location-wrap{width:min(100%,calc((100vh - 190px)*9/16));width:min(100%,calc((100dvh - 190px)*9/16));margin:0 auto}
+.location-map{position:relative;aspect-ratio:9/16;width:100%;border-radius:12px;overflow:hidden;background:var(--soft)}
+.location-status{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:850;margin:0;padding:8px 12px;border-radius:8px;background:#000b;color:#fff;font-size:13px;text-align:center;max-width:85%}
+.location-status[hidden]{display:none}
+.location-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;font-size:13px;color:var(--ink)}
+.location-coords{margin:0;text-align:center;font-size:12px;color:var(--muted)}
+.location-send{margin-top:4px;text-align:center}
+.location-send:disabled{opacity:.5}
+.location-marker-pulse{width:16px;height:16px;border-radius:50%;background:#3b82f6;border:2px solid #fff;animation:loc-pulse 1.6s ease-out infinite}
+@keyframes loc-pulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.55)}70%{box-shadow:0 0 0 14px rgba(59,130,246,0)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
+</style></head>
 <body>
   <main id="app" class="app-shell">
     <div id="panel-outlet">
@@ -164,9 +177,9 @@ audio.chat-media { width: min(100%, 360px); }
         <header class="panel-header"><button class="panel-back" data-back="friends" aria-label="Kembali">‹</button><h1 id="chat-title">Chatroom</h1><span class="chat-actions"><button class="chat-action" data-call="voice" aria-label="Panggilan suara"><img src="https://api.iconify.design/material-symbols/call.svg?color=%23fff" alt=""></button><button class="chat-action" data-call="video" aria-label="Panggilan video"><img src="https://api.iconify.design/material-symbols/videocam.svg?color=%23fff" alt=""></button><button class="chat-action" data-chat-menu aria-label="Menu chat"><img src="https://api.iconify.design/material-symbols/more-vert.svg?color=%23fff" alt=""></button></span></header>
         <div class="chat-menu" id="chat-menu" hidden><button type="button" data-chat-action="clear">🗑️<span>Clear Chat</span></button><button type="button" data-chat-action="remove">👤<span>Hapus Teman</span></button><button type="button" data-chat-action="block">🚫<span>Blokir</span></button></div>
         <p id="chat-activity-status" class="connection-status">Siap</p><div class="chat-messages" id="chat-messages"></div>
-        <form class="chat-compose" id="chat-compose"><span class="attachment-wrap"><button id="attach-button" type="button" aria-label="Lampiran"><img src="https://api.iconify.design/material-symbols/add.svg?color=%23fff" alt=""></button><span id="attachment-menu" class="attachment-menu" hidden><button type="button" data-pick="file">📁 File / Memory</button><button type="button" data-pick="photo">📷 Foto kamera</button><button type="button" data-pick="video">🎥 Video kamera</button></span></span><input id="file-input" type="file" hidden><input id="photo-input" type="file" accept="image/*" capture="environment" hidden><input id="video-input" type="file" accept="video/*" capture="environment" hidden><input id="chat-text" placeholder="Ketik pesan..." autocomplete="off"><button id="chat-submit" type="submit" aria-label="Kirim"><img src="https://api.iconify.design/material-symbols/mic.svg?color=%23fff" alt=""></button></form>
+        <form class="chat-compose" id="chat-compose"><span class="attachment-wrap"><button id="attach-button" type="button" aria-label="Lampiran"><img src="https://api.iconify.design/material-symbols/add.svg?color=%23fff" alt=""></button><span id="attachment-menu" class="attachment-menu" hidden><button type="button" data-pick="file">📁 File / Memory</button><button type="button" data-pick="photo">📷 Foto kamera</button><button type="button" data-pick="video">🎥 Video kamera</button><button type="button" data-pick="location">📍 Lokasi</button></span></span><input id="file-input" type="file" hidden><input id="photo-input" type="file" accept="image/*" capture="environment" hidden><input id="video-input" type="file" accept="video/*" capture="environment" hidden><input id="chat-text" placeholder="Ketik pesan..." autocomplete="off"><button id="chat-submit" type="submit" aria-label="Kirim"><img src="https://api.iconify.design/material-symbols/mic.svg?color=%23fff" alt=""></button></form>
       </section>
-      <section data-panel="settings" class="panel panel-settings hidden">
+      <section data-panel="location" class="panel panel-location hidden"><header class="panel-header"><button class="panel-back" data-back="chatroom" aria-label="Kembali">‹</button><h1>📍 Lokasi</h1></header><div class="panel-content"><div class="location-wrap"><div class="location-map" id="location-map"><p class="location-status" id="location-status">Mencari lokasi…</p></div><div class="location-stats"><span id="location-time">⏱ 0 detik</span><span id="location-accuracy">Akurasi ±… m</span><span id="location-distance">Jarak 0 m</span></div><p class="location-coords" id="location-coords">Menunggu GPS…</p><button type="button" class="setting-action location-send" id="location-send" disabled>📍 Kirim lokasi</button></div></div></section><section data-panel="settings" class="panel panel-settings hidden">
         <header class="panel-header"><button class="panel-back" data-back="friends" aria-label="Kembali">‹</button><h1>⚙️ Setting</h1></header><div class="panel-content"><button class="setting-action" data-open-panel="profile">✏️ Edit Profil</button><div class="language-setting"><label for="language-toggle">Bahasa</label><button type="button" id="language-toggle" class="language-toggle" aria-label="Ganti bahasa">EN</button></div><h2>Theme</h2><button class="setting-action" data-theme="senja">🌅 Senja</button><button class="setting-action" data-theme="natural">🌿 Natural</button><button class="setting-action" data-theme="dark">🌙 Dark</button><button class="setting-action" data-open-panel="about">About</button><button class="setting-action" data-logout>Log out</button></div>
       </section>
       <section data-panel="profile" class="panel panel-profile hidden">
@@ -204,6 +217,8 @@ audio.chat-media { width: min(100%, 360px); }
   <script src="scripts/features/chat-utils.js"></script>
   <script src="scripts/features/friends.js?v=20261012-1540"></script>
   <script src="scripts/features/chat.js?v=20261012-1540"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="scripts/features/location.js"></script>
   
   
   <script src="scripts/features/settings.js"></script>
