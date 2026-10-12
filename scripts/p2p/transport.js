@@ -760,11 +760,9 @@
     const connection = connections.get(`cm-${identity}`);
     return Boolean(connection?.open && readyConnections.has(connection));
   }
-  function probe(peerId, timeout = 1200) {
+  function probe(peerId, timeout = 3000) {
     const identity = normalizePeerIdentity(peerId), target = `cm-${identity}`;
-    const connection = connections.get(target);
-    if (!identity || !connection?.open || !readyConnections.has(connection))
-      return Promise.resolve(false);
+    if (!identity || target === peer?.id) return Promise.resolve(false);
     return new Promise((resolve) => {
       let settled = false;
       const finish = (active) => {
@@ -772,16 +770,40 @@
         settled = true;
         clearTimeout(timer);
         window.removeEventListener("callme:presence-pong", onPong);
+        window.removeEventListener("callme:p2p-status", onStatus);
+        // Tidak menyimpan DataConnection yang gagal menjawab presence:
+        // kanal lama yang tampak open sering menghalangi panggilan berikutnya.
+        if (!active && (isConnected(identity) || hasConnection(identity)))
+          disconnect(identity);
         resolve(active);
+      };
+      const ping = () => {
+        const connection = connections.get(target);
+        if (!connection?.open || !readyConnections.has(connection)) return false;
+        try {
+          connection.send({ kind: "presence-ping" });
+          return true;
+        } catch {
+          return false;
+        }
       };
       const onPong = (event) => {
         if (event.detail?.peerId !== target) return;
         finish(event.detail.awake === true && event.detail.active === true);
       };
+      const onStatus = (event) => {
+        if (normalizePeerIdentity(event.detail?.peerId) !== identity) return;
+        if (event.detail?.status === "online" && isConnected(identity)) ping();
+        else if (event.detail?.status === "offline") finish(false);
+      };
       const timer = setTimeout(() => finish(false), timeout);
       window.addEventListener("callme:presence-pong", onPong);
-      try { connection.send({ kind: "presence-ping" }); }
-      catch { finish(false); }
+      window.addEventListener("callme:p2p-status", onStatus);
+      if (isConnected(identity)) {
+        if (!ping()) finish(false);
+      } else if (!connect(identity, true)) {
+        finish(false);
+      }
     });
   }
   function hasConnection(peerId) {
