@@ -44,8 +44,8 @@ function showCallMeNotification(data) {
   if (kind === "call") {
     options.requireInteraction = true;
     options.actions = [
-      { action: "answer", title: "Jawab" },
-      { action: "decline", title: "Tolak" },
+      { action: "answer", title: "Jawab", icon: new URL("assets/call-answer.svg", self.location.href).href },
+      { action: "decline", title: "Tolak", icon: new URL("assets/call-decline.svg", self.location.href).href },
     ];
   }
   return self.registration.showNotification(title, options);

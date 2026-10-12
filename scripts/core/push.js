@@ -20,6 +20,13 @@
       } else if ((data.kind === "message" || data.kind === "media" || data.kind === "call") && Notification.permission === "granted") {
         var title = data.title || "CallMe";
         var options = { body: data.body || "", icon: "./assets/logo-192.png", data: { url: new URL("./", window.location.href).href, sender: data.sender || "", recipient: data.recipient || "", callId: data.id || "", kind: data.kind || "message", video: /video/i.test(data.body || "") } };
+        if (data.kind === "call") {
+          options.requireInteraction = true;
+          options.actions = [
+            { action: "answer", title: "Jawab", icon: new URL("assets/call-answer.svg", window.location.href).href },
+            { action: "decline", title: "Tolak", icon: new URL("assets/call-decline.svg", window.location.href).href },
+          ];
+        }
         void ensureWorker().then(function (worker) { return worker.showNotification(title, options); });
       }
     });
