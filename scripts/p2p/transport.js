@@ -10,7 +10,9 @@
     // socket yatim (proses lama mati mendadak saat HP tidur) yang akan ditutup
     // server setelah heartbeat habis; hitungan dibatasi agar sesi kedua yang
     // sungguhan tetap berhenti di status konflik, bukan mencoba selamanya.
-    idConflictRetries = 0;
+    idConflictRetries = 0,
+    peerOpenTimer = null,
+    serverStatus = "idle";
   // Irama 1 detik memangkas jeda setelah server melepas socket yatim:
   // pendaftaran ulang menempel sedekat mungkin pada momen pelepasan, jadi
   // putar ulang pemanggil (1 dtk) menemukan kita di siklus berikutnya.
@@ -56,33 +58,65 @@
     String(value || "")
       .replace(/^cm-/i, "")
       .toLowerCase();
+  function publishPeerServerStatus(status, detail = {}) {
+    serverStatus = status;
+    window.dispatchEvent(
+      new CustomEvent("callme:peer-server-status", {
+        detail: { status, ...detail },
+      }),
+    );
+  }
   const blocked = () =>
     JSON.parse(localStorage.getItem("callme-v2-blocked") || "[]").map(
       (value) => `cm-${normalizePeerIdentity(value)}`,
     );
   function start(userId) {
-    if (!userId || typeof Peer !== "function") return false;
+    if (!userId) {
+      publishPeerServerStatus("unavailable", { reason: "missing-user" });
+      return false;
+    }
+    if (typeof Peer !== "function") {
+      publishPeerServerStatus("unavailable", { reason: "peerjs-unavailable" });
+      return false;
+    }
     const identity =
         window.CallMeApp?.normalize?.(userId) || String(userId).toLowerCase(),
       id = `cm-${identity}`;
     lastIdentity = identity;
     clearTimeout(registerTimer);
-    if (peer && !peer.destroyed && peer.id === id) return true;
+    if (peer && !peer.destroyed && peer.id === id) {
+      publishPeerServerStatus(peer.open ? "online" : "connecting", { peerId: id });
+      return true;
+    }
+    clearTimeout(peerOpenTimer);
+    peerOpenTimer = null;
     if (peer)
       try {
         peer.__disposed = true;
         peer.destroy();
       } catch {}
     sessionStopping = false;
-    const instance = new Peer(id, {
-      debug: 3,
-      config: {
-        iceServers: TURN_SERVERS,
-        iceTransportPolicy: "all",
-        sdpSemantics: "unified-plan",
-      },
-    });
+    publishPeerServerStatus("connecting", { peerId: id });
+    let instance;
+    try {
+      instance = new Peer(id, {
+        debug: 3,
+        config: {
+          iceServers: TURN_SERVERS,
+          iceTransportPolicy: "all",
+          sdpSemantics: "unified-plan",
+        },
+      });
+    } catch (error) {
+      publishPeerServerStatus("unavailable", { reason: "constructor-error", error });
+      window.dispatchEvent(new CustomEvent("callme:p2p-error", { detail: error }));
+      return false;
+    }
     peer = instance;
+    peerOpenTimer = setTimeout(() => {
+      if (peer !== instance || instance.open || instance.destroyed || sessionStopping) return;
+      publishPeerServerStatus("timeout", { peerId: id, reason: "registration-timeout" });
+    }, 15000);
     // Event dari instance yang sudah diganti/dihancurkan/di-stop wajib
     // diabaikan: handler "disconnected" yang reconnect saat destroy justru
     // membuat socket yatim sehingga start() berikutnya selalu konflik.
@@ -95,11 +129,9 @@
       if (!isCurrent()) return;
       // Terdaftar berhasil → bentrok sebelumnya sudah selesai.
       idConflictRetries = 0;
-      window.dispatchEvent(
-        new CustomEvent("callme:peer-server-status", {
-          detail: { status: "online", peerId: instance.id },
-        }),
-      );
+      clearTimeout(peerOpenTimer);
+      peerOpenTimer = null;
+      publishPeerServerStatus("online", { peerId: instance.id });
     });
     instance.on("connection", (next) => {
       if (!isCurrent()) return;
@@ -127,11 +159,12 @@
         );
         return;
       }
-      window.dispatchEvent(
-        new CustomEvent("callme:peer-server-status", {
-          detail: { status: idInUse ? "conflict" : "offline", error },
-        }),
-      );
+      clearTimeout(peerOpenTimer);
+      peerOpenTimer = null;
+      publishPeerServerStatus(idInUse ? "conflict" : "offline", {
+        error,
+        reason: error?.type || error?.message || "peer-error",
+      });
       window.dispatchEvent(
         new CustomEvent("callme:p2p-error", { detail: error }),
       );
@@ -155,11 +188,9 @@
     });
     instance.on("disconnected", () => {
       if (!isCurrent()) return;
-      window.dispatchEvent(
-        new CustomEvent("callme:peer-server-status", {
-          detail: { status: "offline", reason: "disconnected" },
-        }),
-      );
+      clearTimeout(peerOpenTimer);
+      peerOpenTimer = null;
+      publishPeerServerStatus("offline", { reason: "disconnected" });
       try {
         instance.reconnect();
       } catch {
@@ -703,6 +734,8 @@
   }
   function stop() {
     clearTimeout(registerTimer);
+    clearTimeout(peerOpenTimer);
+    peerOpenTimer = null;
     registerTimer = null;
     idConflictRetries = 0;
     lastIdentity = "";
@@ -715,6 +748,7 @@
     if (peer) peer.__disposed = true;
     peer?.destroy();
     peer = null;
+    serverStatus = "idle";
     pending.clear();
     mediaParts.forEach((bucket) => clearTimeout(bucket.timer));
     mediaParts.clear();
@@ -845,6 +879,9 @@
     },
     getId() {
       return peer?.id || null;
+    },
+    getStatus() {
+      return serverStatus;
     },
     isConnected,
     probe,

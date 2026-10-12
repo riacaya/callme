@@ -15,9 +15,9 @@
     "getId",
     "isConnected",
     "probe",
-    "probe",
     "hasConnection",
     "isPeerReady",
+    "getStatus",
   ];
   const booleanMethods = new Set([
     "isConnected",
