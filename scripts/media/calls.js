@@ -203,6 +203,7 @@
         returnPanel = session?.returnPanel || "friends";
       callEnded = true;
       if (session?.answerTimer) clearTimeout(session.answerTimer);
+      if (session?.connectTimer) clearTimeout(session.connectTimer);
       remoteReceived = false;
       const
         call = currentCall || pendingIncoming?.incoming,
@@ -219,6 +220,7 @@
         updateCallLog(session.logId, target, "missed");
       currentCall = null;
       pendingIncoming = null;
+      callSession = null;
       try {
         call?.close();
       } catch {}
@@ -230,7 +232,6 @@
       if (callWasProcessed && hasActiveRoom)
         window.CallMeApp.show("chatroom");
       else window.CallMeApp.show(returnPanel);
-      callSession = null;
     };
     const setIncomingControls = (view, incoming) => {
       view?.querySelector("[data-call-accept]")?.toggleAttribute("hidden", !incoming);
@@ -268,9 +269,21 @@
           bindRemoteStream(remote, incoming, status);
         });
         attempt.on("close", () => {
-          if (currentCall === attempt) finish(false);
+          if (callSession === session && currentCall === attempt) finish(false);
         });
-        attempt.on("error", () => { status.textContent = "Panggilan gagal"; });
+        attempt.on("error", () => {
+          if (callSession !== session || currentCall !== attempt) return;
+          status.textContent = "Panggilan gagal";
+          finish(false);
+        });
+        // PeerJS MediaConnection yang berhasil dibuat belum berarti lawan
+        // menerima panggilan. Jangan biarkan UI/sesi lama terlihat hidup.
+        session.connectTimer = setTimeout(() => {
+          if (callSession === session && currentCall === attempt && !remoteReceived) {
+            status.textContent = "Tidak ada jawaban";
+            finish(false);
+          }
+        }, 45000);
       } catch (error) {
         status.textContent = "Media gagal: " + (error?.name || "error");
       }
@@ -468,7 +481,8 @@
       });
       pendingIncoming = { incoming, mode };
       incoming.on("close", () => {
-        if (pendingIncoming?.incoming === incoming) finish(false);
+        if (callSession?.peerId === incomingPeer && pendingIncoming?.incoming === incoming)
+          finish(false);
       });
       const view = panel(mode),
         local =
