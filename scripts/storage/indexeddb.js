@@ -1,13 +1,12 @@
 (function () {
   const name = "callme-v2";
-  const version = 3;
-  const stores = ["contacts", "messages", "media", "settings", "unread", "event-log"];
+  const version = 4;
+  const stores = ["contacts", "messages", "media", "settings", "unread"];
 
   function keyPathFor(store) {
     if (store === "contacts") return "peerId";
     if (store === "settings") return "key";
     if (store === "unread") return "peerId";
-    if (store === "event-log") return "id";
     return "id";
   }
 
@@ -17,6 +16,8 @@
 
       request.onupgradeneeded = () => {
         const db = request.result;
+        if (db.objectStoreNames.contains("event-log"))
+          db.deleteObjectStore("event-log");
         stores.forEach((store) => {
           if (!db.objectStoreNames.contains(store)) {
             db.createObjectStore(store, { keyPath: keyPathFor(store) });

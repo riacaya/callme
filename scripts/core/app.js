@@ -17,14 +17,6 @@
   }
 
   function show(name) {
-    if (name === "admin") {
-      const identity = normalize(
-        sessionStorage.getItem("callme-v2-session-user") || "",
-      ).replace(/^cm-/i, "");
-      if (!/^(riacaya|aurora)$/.test(identity)) {
-        name = "settings";
-      }
-    }
     panels.forEach((panel, key) => {
       panel.classList.toggle("hidden", key !== name);
     });
@@ -49,7 +41,6 @@
   let notificationRoutePromise = null;
   const logNotificationRoute = (message, peer, detail = "") => {
     const target = String(peer || "").replace(/^cm-/i, "").toLowerCase();
-    void window.CallMeEventLog?.log?.("Notifikasi", message, [target, detail].filter(Boolean).join(" · "));
   };
   async function routeNotification(detail) {
     if (notificationRoutePromise) return notificationRoutePromise;

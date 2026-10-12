@@ -25,7 +25,6 @@
     pending = new Map(),
     mediaParts = new Map(),
     completedFiles = new Map(),
-    ackWaiters = new Map(),
     presenceTimers = new Map(),
     routeByPeer = new Map(),
     listeners = new Set();
@@ -371,12 +370,6 @@
         return;
       }
       if (data?.kind === "message-ack") {
-        const waiter = ackWaiters.get(data.id);
-        if (waiter && waiter.peerId === next.peer) {
-          clearTimeout(waiter.timer);
-          ackWaiters.delete(data.id);
-          waiter.resolve(true);
-        }
         window.dispatchEvent(
           new CustomEvent("callme:message-ack", {
             detail: { id: data.id, peerId: next.peer },
@@ -472,19 +465,20 @@
         delete data.i;
         delete data.total;
         delete data.part;
-        const completedAtForCleanup = Date.now();
-        completedFiles.set(data.id, completedAtForCleanup);
-        setTimeout(() => {
-          if (completedFiles.get(data.id) === completedAtForCleanup)
-            completedFiles.delete(data.id);
-        }, 300000);
         const row = { ...data, senderPeerId: next.peer, mine: false, createdAt: data.createdAt || Date.now() };
         const save = window.CallMeStorage?.put?.("messages", row);
         const acknowledge = () => {
+          const completedAt = Date.now();
+          completedFiles.set(data.id, completedAt);
+          setTimeout(() => {
+            if (completedFiles.get(data.id) === completedAt)
+              completedFiles.delete(data.id);
+          }, 300000);
           try { if (next.open) next.send({ kind: "file-complete-ack", id: data.id }); } catch {}
         };
-        if (save && typeof save.then === "function") save.then(acknowledge, acknowledge);
-        else acknowledge();
+        if (save && typeof save.then === "function")
+          save.then(acknowledge, (error) => console.warn("Lampiran diterima, tetapi gagal disimpan", error));
+        else if (save !== undefined) acknowledge();
       }
       if (data?.kind === "media-chunk") {
         const bucket = mediaParts.get(data.id) || {
@@ -536,8 +530,9 @@
         if (data.kind === "text" || data.kind === "call-log") {
           const row = { ...data, senderPeerId: next.peer, mine: false, createdAt: data.createdAt || Date.now() };
           const save = window.CallMeStorage?.put?.("messages", row);
-          if (save && typeof save.then === "function") save.then(sendAck, sendAck);
-          else sendAck();
+          if (save && typeof save.then === "function")
+            save.then(sendAck, (error) => console.warn("Pesan diterima, tetapi gagal disimpan", error));
+          else if (save !== undefined) sendAck();
         } else sendAck();
       }
       const message = { ...data, senderPeerId: next.peer };
@@ -554,12 +549,6 @@
       if (connections.get(next.peer) !== next) return;
       connections.delete(next.peer);
       routeByPeer.delete(next.peer);
-      for (const [id, waiter] of ackWaiters) {
-        if (waiter.peerId !== next.peer) continue;
-        clearTimeout(waiter.timer);
-        ackWaiters.delete(id);
-        waiter.resolve(false);
-      }
       window.dispatchEvent(
         new CustomEvent("callme:p2p-status", {
           detail: { peerId: next.peer, status: "offline" },
@@ -572,9 +561,19 @@
     next.on("error", (error) => {
       if (connections.get(next.peer) !== next) return;
       readyConnections.delete(next);
+      clearTimeout(presenceTimers.get(next.peer));
+      presenceTimers.delete(next.peer);
+      try { next.close(); } catch {}
+      connections.delete(next.peer);
+      routeByPeer.delete(next.peer);
       window.dispatchEvent(
         new CustomEvent("callme:p2p-error", {
           detail: { peerId: next.peer, error },
+        }),
+      );
+      window.dispatchEvent(
+        new CustomEvent("callme:p2p-status", {
+          detail: { peerId: next.peer, status: "offline", reason: "connection-error" },
         }),
       );
     });
@@ -586,32 +585,39 @@
     const id = `cm-${identity}`,
       existing = connections.get(id);
     if (existing?.open) {
-      if (!readyConnections.has(existing)) return existing;
-      try {
-        existing.send({ kind: "presence-ping" });
-      } catch {}
-      clearTimeout(presenceTimers.get(id));
-      presenceTimers.set(
-        id,
-        setTimeout(() => {
-          if (connections.get(id) !== existing || !existing.open) return;
-          try {
-            existing.close();
-          } catch {}
-          readyConnections.delete(existing);
-          if (connections.get(id) === existing) connections.delete(id);
-          window.dispatchEvent(
-            new CustomEvent("callme:p2p-status", {
-              detail: {
-                peerId: id,
-                status: "offline",
-                reason: "presence-timeout",
-              },
-            }),
-          );
-        }, 10000),
-      );
-      return existing;
+      if (!readyConnections.has(existing)) {
+        if (Date.now() - (existing.__createdAt || 0) < 8000) return existing;
+        try { existing.close(); } catch {}
+        readyConnections.delete(existing);
+        if (connections.get(id) === existing) connections.delete(id);
+        routeByPeer.delete(id);
+      } else {
+        try {
+          existing.send({ kind: "presence-ping" });
+        } catch {}
+        clearTimeout(presenceTimers.get(id));
+        presenceTimers.set(
+          id,
+          setTimeout(() => {
+            if (connections.get(id) !== existing || !existing.open) return;
+            try {
+              existing.close();
+            } catch {}
+            readyConnections.delete(existing);
+            if (connections.get(id) === existing) connections.delete(id);
+            window.dispatchEvent(
+              new CustomEvent("callme:p2p-status", {
+                detail: {
+                  peerId: id,
+                  status: "offline",
+                  reason: "presence-timeout",
+                },
+              }),
+            );
+          }, 10000),
+        );
+        return existing;
+      }
     }
     if (
       existing &&
@@ -710,34 +716,6 @@
     presenceTimers.delete(id);
     connections.delete(id);
   }
-  function waitForAck(messageId, peerId) {
-    cancelAck(messageId);
-    const identity = normalizePeerIdentity(peerId);
-    return new Promise((resolve) => {
-      const waiter = {
-        peerId: `cm-${identity}`,
-        resolve,
-        timer: null,
-      };
-      ackWaiters.set(messageId, waiter);
-    });
-  }
-  function armAckTimeout(messageId, timeout = 300000) {
-    const waiter = ackWaiters.get(messageId);
-    if (!waiter) return;
-    clearTimeout(waiter.timer);
-    waiter.timer = setTimeout(() => {
-      ackWaiters.delete(messageId);
-      waiter.resolve(false);
-    }, timeout);
-  }
-  function cancelAck(messageId) {
-    const waiter = ackWaiters.get(messageId);
-    if (!waiter) return;
-    clearTimeout(waiter.timer);
-    ackWaiters.delete(messageId);
-    waiter.resolve(false);
-  }
   function call(peerId, stream, metadata) {
     if (!peer || !peerId) return null;
     const raw = String(peerId).trim().replace(/^cm-/i, "");
@@ -765,7 +743,6 @@
     mediaParts.forEach((bucket) => clearTimeout(bucket.timer));
     mediaParts.clear();
     completedFiles.clear();
-    for (const id of ackWaiters.keys()) cancelAck(id);
   }
   function isConnected(peerId) {
     const identity = normalizePeerIdentity(peerId);
@@ -783,10 +760,6 @@
         clearTimeout(timer);
         window.removeEventListener("callme:presence-pong", onPong);
         window.removeEventListener("callme:p2p-status", onStatus);
-        // Tidak menyimpan DataConnection yang gagal menjawab presence:
-        // kanal lama yang tampak open sering menghalangi panggilan berikutnya.
-        if (!active && (isConnected(identity) || hasConnection(identity)))
-          disconnect(identity);
         resolve(active);
       };
       const ping = () => {
@@ -831,68 +804,6 @@
   function isPeerReady() {
     return Boolean(peer && !peer.destroyed && peer.open && peer.id);
   }
-  async function testTurn(target) {
-    const self = normalizePeerIdentity(lastIdentity || sessionStorage.getItem("callme-v2-session-user"));
-    const other = normalizePeerIdentity(target);
-    if (!/^(aurora|riacaya)$/.test(self) || !/^(aurora|riacaya)$/.test(other) || self === other) throw new Error("Uji TURN hanya untuk Aurora dan Riacaya.");
-    if (typeof Peer !== "function") throw new Error("PeerJS belum tersedia.");
-    const testSelf = `cm-test-${self}`;
-    const testOther = `cm-test-${other}`;
-    const testPeer = new Peer(testSelf, { debug: 0, config: { iceServers: TURN_SERVERS, iceTransportPolicy: "relay", sdpSemantics: "unified-plan" } });
-    const cleanup = () => { try { testPeer.destroy(); } catch {} };
-    // Jendela 30 detik + percobaan ulang otomatis: uji harus berhasil dengan
-    // urutan klik bebas (siapa pun yang menekan duluan) tanpa refresh.
-    const WINDOW_MS = 30000;
-    try {
-      if (self === "aurora") {
-        await new Promise((resolve, reject) => {
-          let settled = false;
-          const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); fn(value); };
-          const timer = setTimeout(() => finish(reject, new Error("Menunggu koneksi dari cm-test-riacaya timeout.")), WINDOW_MS);
-          // Pasang SEMUA listener sebelum menunggu: mendaftarkan listener
-          // "connection" setelah event "open" membuka celah koneksi hilang
-          // bila sisi penghubung sudah menekan lebih dulu.
-          testPeer.on("error", (error) => finish(reject, new Error(error?.type || error?.message || "Peer test gagal")));
-          testPeer.on("connection", (connection) => {
-            connection.on("data", (data) => {
-              if (data?.kind !== "TURN_TEST") return;
-              try { connection.send({ kind: "TURN_ACK", id: data.id }); } catch {}
-              finish(resolve, true);
-            });
-          });
-        });
-      } else {
-        await new Promise((resolve, reject) => {
-          let settled = false, connection = null, timer = null;
-          const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); fn(value); };
-          const deadline = Date.now() + WINDOW_MS;
-          const attempt = () => {
-            clearTimeout(timer);
-            if (settled) return;
-            if (connection) { try { connection.close(); } catch {} }
-            connection = testPeer.connect(testOther, { reliable: true });
-            connection.on("open", () => { try { connection.send({ kind: "TURN_TEST", id: `turn-test-${Date.now()}` }); } catch {} });
-            connection.on("data", (data) => { if (data?.kind === "TURN_ACK") finish(resolve, true); });
-            // Tiap percobaan diberi waktu 4 detik; EXPIRE (lawan belum
-            // mendaftar) tidak menutup koneksi PeerJS, jadi kita ulangi sendiri.
-            timer = setTimeout(() => {
-              if (settled) return;
-              if (Date.now() >= deadline) { finish(reject, new Error("Koneksi test TURN timeout.")); return; }
-              attempt();
-            }, 4000);
-          };
-          testPeer.on("error", (error) => {
-            // Lawan belum ada / WebRTC gagal adalah kondisi normal saat
-            // percobaan ulang; jangan gagalkan seluruh uji.
-            if (error?.type === "peer-unavailable" || error?.type === "webrtc") return;
-            finish(reject, new Error(error?.type || error?.message || "Peer test gagal"));
-          });
-          attempt();
-        });
-      }
-      return true;
-    } finally { cleanup(); }
-  }
   function getRoute(peerId) {
     return routeByPeer.get(`cm-${normalizePeerIdentity(peerId)}`) || "";
   }
@@ -902,9 +813,6 @@
     disconnect,
     send,
     sendCallControl,
-    waitForAck,
-    armAckTimeout,
-    cancelAck,
     call,
     stop,
     on(listener) {
@@ -922,6 +830,5 @@
     hasConnection,
     isPeerReady,
     getRoute,
-    testTurn,
   };
 })();

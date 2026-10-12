@@ -107,7 +107,6 @@
       if (!localUser || !localToken || window.CallMeApp?.normalize?.(localUser) !== identity) return false;
       sessionStorage.setItem("callme-v2-session-user", localUser);
       sessionStorage.setItem("callme-v2-session-token", localToken);
-      sessionStorage.setItem("callme-v2-role", /^(riacaya|aurora)$/.test(identity) ? "admin" : "user");
       window.CallMeP2P?.start(localUser);
       window.CallMeApp.show("friends");
       return true;
@@ -117,7 +116,6 @@
       if (!stored || stored !== await digest(secret)) return false;
       sessionStorage.setItem("callme-v2-session-user", identity);
       sessionStorage.setItem("callme-v2-session-token", "local-device-session");
-      sessionStorage.setItem("callme-v2-role", /^(riacaya|aurora)$/.test(identity) ? "admin" : "user");
       localStorage.setItem("callme-v2-persistent-session", identity);
       localStorage.setItem("callme-v2-session-token", "local-device-session");
       localStorage.setItem("callme-v2-user", identity);
@@ -131,7 +129,6 @@
         if (!result?.ok || !result.token) return;
         sessionStorage.setItem("callme-v2-session-user", result.username || identity);
         sessionStorage.setItem("callme-v2-session-token", result.token);
-        sessionStorage.setItem("callme-v2-role", result.role || "user");
         localStorage.setItem("callme-v2-persistent-session", result.username || identity);
         localStorage.setItem("callme-v2-session-token", result.token);
         sessionExpired = false;
@@ -148,14 +145,14 @@
         return;
       }
 
-      const isAdministrator = /^(riacaya|aurora)$/.test(identity);
-      if (!signup && !isAdministrator && openLocalSession(identity)) {
+      const isPrimaryAccount = /^(riacaya|aurora)$/.test(identity);
+      if (!signup && !isPrimaryAccount && openLocalSession(identity)) {
         password.value = "";
         setStatus("Membuka dari sesi lokal...");
         void refreshServerSession(identity, secret);
         return;
       }
-      if (!signup && !isAdministrator && await openLocalAccount(identity, secret)) {
+      if (!signup && !isPrimaryAccount && await openLocalAccount(identity, secret)) {
         password.value = "";
         setStatus("Membuka dari database lokal...");
         void refreshServerSession(identity, secret);
@@ -189,15 +186,14 @@
           }
           sessionStorage.setItem("callme-v2-session-user", result.username || identity);
           sessionStorage.setItem("callme-v2-session-token", result.token || "");
-          sessionStorage.setItem("callme-v2-role", result.role || "user");
           localStorage.setItem("callme-v2-persistent-session", result.username || identity);
           localStorage.setItem("callme-v2-session-token", result.token || "");
           localStorage.setItem("callme-v2-user", result.username || identity);
           sessionExpired = false;
           // Cache lokal untuk login cepat berikutnya; hanya hash, bukan sandi mentah.
-          if (!isAdministrator) localStorage.setItem(`callme-local-account-${identity}`, await digest(secret));
+          if (!isPrimaryAccount) localStorage.setItem(`callme-local-account-${identity}`, await digest(secret));
           void window.CallMeProfileRepository?.syncAll?.(result.username || identity, result.token || "");
-          window.dispatchEvent(new CustomEvent("callme:session-user", { detail: { user: result.username || identity, role: result.role || "user" } }));
+          window.dispatchEvent(new CustomEvent("callme:session-user", { detail: { user: result.username || identity } }));
           window.CallMeP2P?.start(result.username || identity);
           password.value = "";
           setStatus("Membuka aplikasi...");

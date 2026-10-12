@@ -821,8 +821,6 @@
           window.dispatchEvent(new CustomEvent("callme:local-storage-warning", { detail: { id: row.id, name: row.name } }));
         }
         if (row.id && row.kind !== "media" && row.kind !== "audio") {
-          window.CallMeP2P?.sendCallControl?.({ kind: "message-ack", id: row.id }, senderPeerId);
-          window.dispatchEvent(new CustomEvent("callme:message-ack", { detail: { id: row.id, peerId: senderPeerId } }));
         }
       })();
       void (async () => {
@@ -912,7 +910,7 @@
         }
       }),
     );
-    // Satu jalur kirim pesan teks: dipakai kotak chat dan panel lokasi.
+    // Satu jalur kirim pesan teks untuk kotak chat.
     // Guard sending menutup jendela di mana teks masih ada di kotak sementara
     // IndexedDB belum selesai — tanpa ini, ketukan/Enter beruntun menghasilkan
     // dua pesan berbeda id yang sama isinya.
@@ -970,7 +968,7 @@
           // Kanal ready sudah menyelesaikan HELLO; kirim langsung agar setiap
           // pesan tidak menunggu round-trip presence hingga 3 detik.
           if (!p2pReady)
-            p2pReady = Boolean(await window.CallMeP2P?.probe?.(activeFriend.peerId, 1200));
+            p2pReady = Boolean(await window.CallMeP2P?.probe?.(activeFriend.peerId, 2000));
           if (p2pReady) {
             const ackPromise = waitForAck(row.id, 2500);
             const sent = await window.CallMeP2P?.send?.(row, activeFriend.peerId);
@@ -979,22 +977,27 @@
         } finally {
           sendingMessageIds.delete(row.id);
         }
-        if (!p2pReady || !acked) {
-          // Pemberitahuan ber-ID membangunkan penerima; isi tetap antre
-          // di pengirim dan dikirim lewat P2P saat koneksi kembali siap.
-          window.CallMePush?.notify?.(
-            activeFriend.peerId, "message",
-            activeFriend.display_name || activeFriend.phone || activeFriend.peerId,
-            value,
-            { id: row.id, roomId: row.roomId, createdAt: row.createdAt, pendingOnly: true, sender: sessionStorage.getItem("callme-v2-session-user") || "" },
-          );
-        } else if (acked) {
+        if (acked) {
           row.deliveryStatus = "delivered";
           await window.CallMeStorage?.put?.("messages", row);
         } else {
+          // ACK tidak tiba: biarkan pesan antre untuk retry P2P dengan ID
+          // yang sama. Pemberitahuan hanya membangunkan penerima; isinya
+          // tidak dikirim ulang lewat push.
           row.deliveryStatus = "sending";
           await window.CallMeStorage?.put?.("messages", row);
-          await flushPendingMessages(activeFriend.peerId);
+          if (!p2pReady) {
+          // Pemberitahuan ber-ID membangunkan penerima; isi tetap antre
+          // di pengirim dan dikirim lewat P2P saat koneksi kembali siap.
+            window.CallMePush?.notify?.(
+              activeFriend.peerId, "message",
+              activeFriend.display_name || activeFriend.phone || activeFriend.peerId,
+              value,
+              { id: row.id, roomId: row.roomId, createdAt: row.createdAt, pendingOnly: true, sender: sessionStorage.getItem("callme-v2-session-user") || "" },
+            );
+          } else {
+            await flushPendingMessages(activeFriend.peerId);
+          }
         }
         return true;
       } finally {

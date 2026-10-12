@@ -204,6 +204,7 @@
       callEnded = true;
       if (session?.answerTimer) clearTimeout(session.answerTimer);
       if (session?.connectTimer) clearTimeout(session.connectTimer);
+      if (session?.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
       remoteReceived = false;
       const
         call = currentCall || pendingIncoming?.incoming,
@@ -279,7 +280,16 @@
         });
         attempt.on("iceStateChanged", (state) => {
           if (callSession !== session || currentCall !== attempt) return;
-          if (state === "disconnected" || state === "failed") {
+          if (state === "connected" || state === "completed") {
+            if (session.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+            session.iceDisconnectTimer = null;
+          } else if (state === "disconnected") {
+            status.textContent = "Menyambung kembali...";
+            if (session.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+            session.iceDisconnectTimer = setTimeout(() => {
+              if (callSession === session && currentCall === attempt) finish(false);
+            }, 2000);
+          } else if (state === "failed") {
             status.textContent = "Koneksi terputus";
             finish(false);
           }
@@ -341,7 +351,7 @@
       // Minta jawaban status pada koneksi yang aktif. Timeout berarti tidur/
       // tidak terjangkau dan FCM menjadi mekanisme bangun.
       const awake = window.CallMeP2P?.isConnected?.(target) ||
-        await window.CallMeP2P?.probe?.(target, 1200);
+        await window.CallMeP2P?.probe?.(target, 2000);
       if (callSession !== session || callEnded) return;
       if (awake) {
         void startOutgoingP2P(mode, target, session);
@@ -436,7 +446,18 @@
           incoming.on("error", () => { status.textContent = "Panggilan gagal"; finish(false); });
           incoming.on("iceStateChanged", (state) => {
             if (callSession !== session || currentCall !== incoming) return;
-            if (state === "disconnected" || state === "failed") finish(false);
+            if (state === "connected" || state === "completed") {
+              if (session.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+              session.iceDisconnectTimer = null;
+            } else if (state === "disconnected") {
+              status.textContent = "Menyambung kembali...";
+              if (session.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+              session.iceDisconnectTimer = setTimeout(() => {
+                if (callSession === session && currentCall === incoming) finish(false);
+              }, 2000);
+            } else if (state === "failed") {
+              finish(false);
+            }
           });
         } catch (error) {
           status.textContent = "Panggilan gagal: " + (error?.name || "error");

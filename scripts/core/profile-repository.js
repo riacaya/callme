@@ -54,7 +54,7 @@
     const contacts = (await window.CallMeStorage?.all?.("contacts")) || [];
     const known = new Map(contacts.map((contact) => [key(contact.peerId), contact]));
     // Database lokal hanya berisi teman yang ditambahkan user. Jangan mengisi
-    // cache dengan seluruh user Spreadsheet; daftar penuh hanya untuk Admin.
+    // cache dengan seluruh user Spreadsheet; hanya sinkronkan kontak yang dipilih.
     const results = await Promise.all([...known.values()].map((contact) => syncContact(contact.peerId, requester, token)));
     window.dispatchEvent(new CustomEvent("callme:local-profiles-synced", {
       detail: { username: user, own, contacts: results.filter(Boolean) },

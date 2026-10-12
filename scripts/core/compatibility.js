@@ -136,7 +136,7 @@
     // Isi file tetap melalui P2P; FCM hanya memberi tahu/membangunkan
     // penerima saat pemeriksaan presence menyatakan perangkat sedang tidur.
     const awake = window.CallMeP2P?.isConnected?.(peer) ||
-      await window.CallMeP2P?.probe?.(peer, 1200);
+      await window.CallMeP2P?.probe?.(peer, 2000);
     if (!awake) {
       const sender = sessionStorage.getItem("callme-v2-session-user") || "";
       const label = audio
@@ -287,7 +287,6 @@
             peer,
           );
         } catch {}
-        window.CallMeP2P?.cancelAck?.(row.id);
         window.dispatchEvent(
           new CustomEvent("callme:p2p-send-wait", {
             detail: { id: row.id, file: row.name, index },

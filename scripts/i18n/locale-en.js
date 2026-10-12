@@ -3,7 +3,6 @@
     "✏️ Edit Profil": "✏️ Edit Profile",
     "🌅 Senja": "🌅 Sunset",
     "🌿 Natural": "🌿 Natural",
-    "✨ Elegant": "✨ Elegant",
     "🌙 Dark": "🌙 Dark",
     Bahasa: "Language",
     "Bahasa Indonesia": "Indonesian",
