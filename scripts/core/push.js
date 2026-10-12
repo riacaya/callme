@@ -160,6 +160,18 @@
     return tokenRefreshPromise;
   }
 
+  function updateBrowserPushStatus(active) {
+    var button = document.querySelector('[data-browser-push="enable"]');
+    if (!button) return;
+    button.textContent = active
+      ? "Notifikasi browser aktif"
+      : "Notifikasi belum aktif — tekan untuk mengaktifkan";
+    button.dataset.pushActive = active ? "true" : "false";
+    button.title = active
+      ? "Token browser sudah terdaftar pada layanan push."
+      : "Izin browser saja belum menjamin token push terdaftar.";
+  }
+
   async function disableBrowserPush() {
     if (!("serviceWorker" in navigator)) return false;
     var worker = await ensureWorker();
@@ -195,27 +207,30 @@
     return true;
   }
 
-  window.addEventListener("callme:session-user", function () { void refreshBrowserPush(); });
+  window.addEventListener("callme:session-user", function () {
+    void refreshBrowserPush().then(updateBrowserPushStatus);
+  });
   document.addEventListener("DOMContentLoaded", function () {
     var settings = document.querySelector('[data-panel="settings"] .panel-content');
     if (!settings || !("Notification" in window) || !("PushManager" in window)) return;
     var button = document.createElement("button");
     button.type = "button";
     button.className = "setting-action";
-    button.textContent = Notification.permission === "granted" ? "Aktifkan ulang notifikasi browser" : "Aktifkan notifikasi browser";
+    button.textContent = "Memeriksa status notifikasi browser...";
     button.dataset.browserPush = "enable";
     settings.prepend(button);
+    button.dataset.pushActive = "false";
     button.addEventListener("click", async function () {
       button.disabled = true;
       try {
         await registerBrowserPush();
-        button.textContent = "Notifikasi browser aktif";
-        button.title = "Push browser aktif untuk akun ini.";
+        updateBrowserPushStatus(true);
       } catch (error) {
+        updateBrowserPushStatus(false);
         alert(error.message || "Notifikasi browser gagal diaktifkan.");
       } finally { button.disabled = false; }
     });
-    void refreshBrowserPush();
+    void refreshBrowserPush().then(updateBrowserPushStatus);
   });
 
   window.CallMePush = Object.freeze({
