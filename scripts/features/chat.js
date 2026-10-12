@@ -175,7 +175,7 @@
           { kind: "room-idle", roomId: roomKey(activeFriend.peerId) },
           activeFriend.peerId,
         );
-        window.CallMeP2P?.disconnect?.(activeFriend.peerId);
+        activeRoute = "";
       }
     }
     window.addEventListener("callme:panel-change", (event) => {
@@ -779,85 +779,64 @@
       render,
       sendText,
     };
-    window.CallMeP2P?.on(async (data) => {
-      if (["room-active", "room-idle"].includes(data?.kind))
-        return;
-      if (data?.roomId && data?.senderPeerId) {
-        const peerId = normalizePeer(data.senderPeerId);
-        const contacts = (await window.CallMeStorage?.all?.("contacts")) || [];
-        if (!contacts.some((contact) => normalizePeer(contact.peerId) === peerId)) {
-          await window.CallMeStorage?.put?.("contacts", {
-            peerId,
-            phone: peerId,
-            display_name: data.senderName || data.display_name || peerId,
-            profile_photo: data.profile_photo || "",
-            email: data.email || "",
-            savedAt: Date.now(),
-          });
-          await window.CallMeStorage?.remove?.("settings", `deleted-contact:${peerId}`);
-          window.dispatchEvent(new CustomEvent("callme:contacts-updated"));
-        }
-      }
-      if (
-        !activeFriend ||
-        !data?.roomId ||
-        data.roomId !== roomKey(activeFriend.peerId)
-      )
-        return;
+    window.CallMeP2P?.on((data) => {
+      if (["room-active", "room-idle"].includes(data?.kind)) return;
+      const senderPeerId = normalizePeer(data?.senderPeerId || data?.peerId);
+      if (!data?.roomId || !senderPeerId || data.roomId !== roomKey(senderPeerId)) return;
       const row = {
         ...data,
+        senderPeerId,
         mine: false,
         id: data.id || window.CallMeApp.uid(),
         createdAt: data.createdAt || Date.now(),
       };
-      let rows = [];
-      try {
-        rows = (await window.CallMeStorage?.all?.("messages")) || [];
-      } catch {}
-      const existing = rows.find((saved) => saved.id === row.id);
-      if (existing && data.kind === "call-log") {
-        const updated = { ...existing, ...row, mine: existing.mine };
-        await window.CallMeStorage?.put?.("messages", updated);
-        if (activeFriend?.peerId && row.roomId === roomKey(activeFriend.peerId)) {
-          messages.querySelector(`[data-message-id="${CSS.escape(row.id)}"]`)?.remove();
-          render(updated);
-        }
+      const isCurrentRoom = Boolean(
+        activeFriend?.peerId &&
+        normalizePeer(activeFriend.peerId) === normalizePeer(senderPeerId) &&
+        row.roomId === roomKey(activeFriend.peerId)
+      );
+      if (!isCurrentRoom) {
+        if (row.kind !== "media" && row.kind !== "audio")
+          void window.CallMeStorage?.put?.("messages", row).catch?.((error) => console.warn("Pesan latar gagal disimpan", error));
         return;
       }
-      if (existing) {
-        // Pengiriman ulang dengan ID yang sama bersifat idempoten: jangan
-        // merender pesan kedua, tetapi selalu balas ACK agar pengirim pulih.
-        // Transport menyimpan teks/call-log sebelum memancarkan event. Karena
-        // itu baris tersimpan belum tentu sudah ada di DOM room yang sedang
-        // dibuka; render yang hilang sambil tetap mencegah bubble ganda.
-        if (
-          data.kind !== "call-log" &&
-          row.roomId === roomKey(activeFriend.peerId) &&
-          !messages.querySelector(`[data-message-id="${CSS.escape(row.id)}"]`)
-        ) render({ ...existing, ...row, mine: existing.mine });
-        if (data?.id && data.kind !== "media" && data.kind !== "audio") {
-          const ack = { kind: "message-ack", id: data.id };
-          window.CallMeP2P?.sendCallControl?.(ack, data.senderPeerId);
-          window.dispatchEvent(new CustomEvent("callme:message-ack", { detail: { id: data.id, peerId: data.senderPeerId } }));
+      const existingItem = messages.querySelector(`[data-message-id="${CSS.escape(row.id)}"]`);
+      if (!existingItem) {
+        render(row);
+        if (row.kind !== "call-log") tone(false);
+      }
+      void (async () => {
+        try {
+          const existing = row.id ? await window.CallMeStorage?.get?.("messages", row.id) : null;
+          if (existing && row.kind === "call-log") {
+            const updated = { ...existing, ...row, mine: existing.mine };
+            await window.CallMeStorage?.put?.("messages", updated);
+            messages.querySelector(`[data-message-id="${CSS.escape(row.id)}"]`)?.remove();
+            render(updated);
+          } else if (!existing && row.kind !== "media" && row.kind !== "audio") {
+            await window.CallMeStorage?.put?.("messages", row);
+          }
+        } catch (error) {
+          console.warn("Pesan diterima tetapi gagal disimpan lokal", error);
+          window.dispatchEvent(new CustomEvent("callme:local-storage-warning", { detail: { id: row.id, name: row.name } }));
         }
-        return;
-      }
-      render(row);
-      // Ketukan pesan diterima (bukan catatan panggilan — panggilan sudah
-      // punya bel notifikasi sendiri).
-      if (row.kind !== "call-log") tone(false);
-      try {
-        await window.CallMeStorage?.put?.("messages", row);
-      } catch (error) {
-        console.warn("Pesan diterima tetapi gagal disimpan lokal", error);
-        window.dispatchEvent(
-          new CustomEvent("callme:local-storage-warning", {
-            detail: { id: row.id, name: row.name },
-          }),
-        );
-      }
-    });
-    function updateSubmit() {
+        if (row.id && row.kind !== "media" && row.kind !== "audio") {
+          window.CallMeP2P?.sendCallControl?.({ kind: "message-ack", id: row.id }, senderPeerId);
+          window.dispatchEvent(new CustomEvent("callme:message-ack", { detail: { id: row.id, peerId: senderPeerId } }));
+        }
+      })();
+      void (async () => {
+        const contacts = (await window.CallMeStorage?.all?.("contacts")) || [];
+        if (!contacts.some((contact) => normalizePeer(contact.peerId) === normalizePeer(senderPeerId))) {
+          await window.CallMeStorage?.put?.("contacts", {
+            peerId: normalizePeer(senderPeerId), phone: normalizePeer(senderPeerId),
+            display_name: data.senderName || data.display_name || normalizePeer(senderPeerId),
+            profile_photo: data.profile_photo || "", email: "", savedAt: Date.now(),
+          });
+          window.dispatchEvent(new CustomEvent("callme:contacts-updated"));
+        }
+      })().catch((error) => console.warn("Kontak pengirim gagal disimpan", error));
+    });    function updateSubmit() {
       const text = Boolean(input.value.trim());
       submit.type = text ? "submit" : "button";
       submit.setAttribute(
@@ -985,22 +964,22 @@
           );
         }
         sendingMessageIds.add(row.id);
-        let p2pReady = false;
+        let p2pReady = Boolean(window.CallMeP2P?.isConnected?.(activeFriend.peerId));
         let acked = false;
         try {
-          // Kanal baru juga diuji lewat presence sebelum memilih FCM.
-          p2pReady = Boolean(
-            await window.CallMeP2P?.probe?.(activeFriend.peerId, 3000),
-          );
+          // Kanal ready sudah menyelesaikan HELLO; kirim langsung agar setiap
+          // pesan tidak menunggu round-trip presence hingga 3 detik.
+          if (!p2pReady)
+            p2pReady = Boolean(await window.CallMeP2P?.probe?.(activeFriend.peerId, 1200));
           if (p2pReady) {
-            const ackPromise = waitForAck(row.id);
+            const ackPromise = waitForAck(row.id, 2500);
             const sent = await window.CallMeP2P?.send?.(row, activeFriend.peerId);
             acked = sent && await ackPromise;
           }
         } finally {
           sendingMessageIds.delete(row.id);
         }
-        if (!p2pReady) {
+        if (!p2pReady || !acked) {
           // Pemberitahuan ber-ID membangunkan penerima; isi tetap antre
           // di pengirim dan dikirim lewat P2P saat koneksi kembali siap.
           window.CallMePush?.notify?.(
