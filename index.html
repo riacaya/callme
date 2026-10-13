@@ -153,7 +153,8 @@ audio.chat-media { width: min(100%, 360px); }
 <style>
 @media (min-width: 900px) {
   :root { --panel-width: min(1280px, calc(100vw - 180px)); }
-  html, body { background: var(--bg); }
+  html, body { background: var(--bg); font-family: Inter, "Segoe UI", Arial, sans-serif; font-size: 15px; }
+  button, input, textarea { font-family: inherit; }
   .app-shell {
     width: var(--panel-width);
     height: 100dvh;
@@ -185,9 +186,9 @@ audio.chat-media { width: min(100%, 360px); }
     top: calc(34% + 126px);
     width: min(420px, calc(100% - 360px));
     color: var(--ink);
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.5;
+    font-size: 19px;
+    font-weight: 650;
+    line-height: 1.55;
     text-align: center;
     content: "Selamat datang di CallMe\A Pilih teman untuk mulai percakapan";
     white-space: pre-line;
@@ -205,12 +206,16 @@ audio.chat-media { width: min(100%, 360px); }
     background: var(--panel);
   }
   .panel-friends .app-header { padding: 12px 18px; }
-  .panel-friends .connection-status { padding: 9px 14px; background: var(--panel); }
+  .panel-friends .app-identity strong { font-size: 17px; letter-spacing: -.2px; }
+  .panel-friends .connection-status { padding: 9px 14px; background: var(--panel); font-size: 12px; }
   .panel-friends .panel-content { padding: 16px 14px; background: var(--panel); }
-  .panel-friends #friend-search input { min-height: 44px; border-radius: 12px; background: var(--chat); }
+  .panel-friends #friend-search input { min-height: 44px; border-radius: 10px; background: var(--chat); font-size: 14px; }
+  .panel-friends #friend-search button { min-height: 44px; border-radius: 10px; font-size: 14px; }
   .panel-friends #friend-search .friend-add { transition: transform .16s ease, filter .16s ease; }
   .panel-friends #friend-search .friend-add:hover { transform: translateY(-1px); filter: brightness(1.06); }
   .panel-friends .friend-item { border-radius: 8px; box-shadow: none; transition: background .16s ease, border-color .16s ease; }
+  .panel-friends .friend-info button { font-size: 14px; }
+  .panel-friends .friend-status { font-size: 12px; }
   .panel-friends .friend-item:hover { border-color: color-mix(in srgb, var(--accent) 38%, transparent); background: color-mix(in srgb, var(--soft) 55%, var(--panel)); }
   .panel-chatroom {
     position: absolute;
@@ -223,7 +228,7 @@ audio.chat-media { width: min(100%, 360px); }
     background: var(--head);
     box-shadow: none;
   }
-  .panel-chatroom .panel-header h1 { text-align: left; font-size: 17px; }
+  .panel-chatroom .panel-header h1 { text-align: left; font-size: 16px; font-weight: 650; letter-spacing: -.15px; }
   .panel-chatroom .panel-back { display: none; }
   .panel-chatroom .chat-messages { padding: 24px 30px 100px; }
   .panel-chatroom .chat-item:not(.chat-item-media),
@@ -239,6 +244,7 @@ audio.chat-media { width: min(100%, 360px); }
     width: auto;
     transform: none;
     align-items: center;
+    gap: 10px;
     padding: 14px 24px 18px;
     background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--chat) 94%, transparent) 25%);
     border-top: 0;
@@ -257,22 +263,29 @@ audio.chat-media { width: min(100%, 360px); }
     box-shadow: 0 12px 34px color-mix(in srgb, var(--ink) 18%, transparent);
   }
   .panel-chatroom .attachment-menu button { width: 100%; padding: 9px 12px; border-radius: 8px; text-align: left; }
+  .panel-chatroom .attachment-menu button { font-size: 14px; line-height: 1.35; }
   .panel-chatroom .attachment-menu button:hover { background: var(--soft); }
+  .panel-chatroom .chat-compose .attachment-wrap { flex: 0 0 40px; width: 40px; height: 40px; }
   .panel-chatroom .chat-compose #chat-text {
-    min-height: 46px;
-    padding: 12px 18px;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 42px;
+    height: 42px;
+    padding: 0 16px;
     border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
     border-radius: 10px;
     background: var(--panel);
     color: var(--ink);
+    font-size: 14px;
+    line-height: 1.4;
     box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 7%, transparent);
   }
   .panel-chatroom .chat-compose #chat-text::placeholder { color: color-mix(in srgb, var(--ink) 55%, transparent); }
   .panel-chatroom .chat-compose #attach-button,
   .panel-chatroom .chat-compose #chat-submit {
-    width: 46px;
-    height: 46px;
-    flex: 0 0 46px;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
     border: 0;
     border-radius: 50%;
     background: var(--accent);
@@ -280,6 +293,7 @@ audio.chat-media { width: min(100%, 360px); }
     box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 28%, transparent);
     transition: transform .16s ease, filter .16s ease;
   }
+  .panel-chatroom .chat-compose button img { width: 17px; height: 17px; }
   .panel-chatroom .chat-compose #attach-button:hover,
   .panel-chatroom .chat-compose #chat-submit:hover { transform: translateY(-1px); filter: brightness(1.06); }
   .panel-chatroom .chat-item-media.media-expanded {
@@ -296,6 +310,45 @@ audio.chat-media { width: min(100%, 360px); }
 @media (min-width: 900px) and (max-height: 650px) {
   .app-shell { height: 100dvh; min-height: 0; margin: 0 auto; }
 }
+</style>
+<style>
+@media (max-width: 899px) {
+  .panel-chatroom .attachment-menu { align-items: stretch; gap: 3px; padding: 8px 12px; }
+  .panel-chatroom .attachment-menu button {
+    width: 100%;
+    padding: 4px 8px;
+    font-size: 14px;
+    line-height: 1.3;
+    text-align: left;
+  }
+}
+.chat-menu { align-items: flex-end; padding: 12px 16px; }
+.chat-menu button {
+  width: min(220px, 100%);
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: right;
+}
+.chat-menu button span { flex: 1; text-align: right; }
+.panel-settings [data-browser-push]::before {
+  content: "🔔";
+  display: inline-grid;
+  place-items: center;
+  width: 21px;
+  min-width: 21px;
+  font-size: 17px;
+}
+.panel-settings [data-browser-push]::after {
+  content: "";
+  min-width: 20px;
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 800;
+  text-align: right;
+}
+.panel-settings [data-browser-push][data-push-active="true"]::after { content: "✓"; }
 </style></head>
 <body>
   <main id="app" class="app-shell">
