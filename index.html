@@ -149,6 +149,153 @@ audio.chat-media { width: min(100%, 360px); }
 .location-send:disabled{opacity:.5}
 .location-marker-pulse{width:16px;height:16px;border-radius:50%;background:#3b82f6;border:2px solid #fff;animation:loc-pulse 1.6s ease-out infinite}
 @keyframes loc-pulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.55)}70%{box-shadow:0 0 0 14px rgba(59,130,246,0)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
+</style>
+<style>
+@media (min-width: 900px) {
+  :root { --panel-width: min(1280px, calc(100vw - 180px)); }
+  html, body { background: var(--bg); }
+  .app-shell {
+    width: var(--panel-width);
+    height: 100dvh;
+    min-height: 0;
+    margin: 0 auto;
+    border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+    border-radius: 10px;
+    box-shadow: 0 18px 52px color-mix(in srgb, var(--ink) 13%, transparent);
+  }
+  #panel-outlet { position: relative; }
+  #panel-outlet:has(.panel-friends:not(.hidden))::before,
+  #panel-outlet:has(.panel-friends:not(.hidden))::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    left: calc(320px + (100% - 320px) / 2);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  #panel-outlet:has(.panel-friends:not(.hidden))::before {
+    top: 34%;
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--panel) 78%, transparent) url("assets/logo-192.png") center / 76px 76px no-repeat;
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+  #panel-outlet:has(.panel-friends:not(.hidden))::after {
+    top: calc(34% + 126px);
+    width: min(420px, calc(100% - 360px));
+    color: var(--ink);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+    content: "Selamat datang di CallMe\A Pilih teman untuk mulai percakapan";
+    white-space: pre-line;
+  }
+  html[lang="en"] #panel-outlet:has(.panel-friends:not(.hidden))::after {
+    content: "Welcome to CallMe\A Select a friend to start chatting";
+  }
+  #panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-friends { display: flex !important; }
+  #panel-outlet:has(.panel-friends:not(.hidden)) .panel-chatroom { display: none !important; }
+  .panel-friends {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 320px;
+    border-right: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+    background: var(--panel);
+  }
+  .panel-friends .app-header { padding: 12px 18px; }
+  .panel-friends .connection-status { padding: 9px 14px; background: var(--panel); }
+  .panel-friends .panel-content { padding: 16px 14px; background: var(--panel); }
+  .panel-friends #friend-search input { min-height: 44px; border-radius: 12px; background: var(--chat); }
+  .panel-friends #friend-search .friend-add { transition: transform .16s ease, filter .16s ease; }
+  .panel-friends #friend-search .friend-add:hover { transform: translateY(-1px); filter: brightness(1.06); }
+  .panel-friends .friend-item { border-radius: 8px; box-shadow: none; transition: background .16s ease, border-color .16s ease; }
+  .panel-friends .friend-item:hover { border-color: color-mix(in srgb, var(--accent) 38%, transparent); background: color-mix(in srgb, var(--soft) 55%, var(--panel)); }
+  .panel-chatroom {
+    position: absolute;
+    inset: 0 0 0 320px;
+    width: auto;
+    background: var(--chat);
+  }
+  .panel-chatroom .panel-header {
+    padding: 10px 22px;
+    background: var(--head);
+    box-shadow: none;
+  }
+  .panel-chatroom .panel-header h1 { text-align: left; font-size: 17px; }
+  .panel-chatroom .panel-back { display: none; }
+  .panel-chatroom .chat-messages { padding: 24px 30px 100px; }
+  .panel-chatroom .chat-item:not(.chat-item-media),
+  .panel-chatroom .chat-item-media:has(>a.chat-media),
+  .panel-chatroom .chat-item-media:has(>audio.chat-media),
+  .panel-chatroom .chat-item-media:has(>img.chat-media),
+  .panel-chatroom .chat-item-media:has(>video.chat-media) { width: min(68%, 680px); max-width: min(68%, 680px); }
+  .panel-chatroom .chat-compose {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    transform: none;
+    align-items: center;
+    padding: 14px 24px 18px;
+    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--chat) 94%, transparent) 25%);
+    border-top: 0;
+  }
+  .panel-chatroom .attachment-menu {
+    position: absolute;
+    left: 24px;
+    right: auto;
+    bottom: 76px;
+    width: auto;
+    min-width: 210px;
+    align-items: stretch;
+    border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+    border-radius: 14px;
+    transform: none;
+    box-shadow: 0 12px 34px color-mix(in srgb, var(--ink) 18%, transparent);
+  }
+  .panel-chatroom .attachment-menu button { width: 100%; padding: 9px 12px; border-radius: 8px; text-align: left; }
+  .panel-chatroom .attachment-menu button:hover { background: var(--soft); }
+  .panel-chatroom .chat-compose #chat-text {
+    min-height: 46px;
+    padding: 12px 18px;
+    border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--ink);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .panel-chatroom .chat-compose #chat-text::placeholder { color: color-mix(in srgb, var(--ink) 55%, transparent); }
+  .panel-chatroom .chat-compose #attach-button,
+  .panel-chatroom .chat-compose #chat-submit {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 28%, transparent);
+    transition: transform .16s ease, filter .16s ease;
+  }
+  .panel-chatroom .chat-compose #attach-button:hover,
+  .panel-chatroom .chat-compose #chat-submit:hover { transform: translateY(-1px); filter: brightness(1.06); }
+  .panel-chatroom .chat-item-media.media-expanded {
+    left: calc(50% + 160px);
+    width: min(calc(var(--panel-width) - 320px), 980px) !important;
+    max-width: min(calc(var(--panel-width) - 320px), 980px) !important;
+  }
+  .panel-settings, .panel-profile, .panel-location, .panel-about, .panel-login {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+  }
+}
+@media (min-width: 900px) and (max-height: 650px) {
+  .app-shell { height: 100dvh; min-height: 0; margin: 0 auto; }
+}
 </style></head>
 <body>
   <main id="app" class="app-shell">
