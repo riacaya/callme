@@ -17,6 +17,10 @@
   }
 
   function show(name) {
+    if (name === "admin") {
+      const identity = normalize(sessionStorage.getItem("callme-v2-session-user") || "").replace(/^cm-/i, "");
+      if (!/^(riacaya|aurora)$/.test(identity)) name = "settings";
+    }
     panels.forEach((panel, key) => {
       panel.classList.toggle("hidden", key !== name);
     });
@@ -38,64 +42,6 @@
     return /^(?:riacaya|aurora)$/.test(id) || /^62[0-9]{8,15}$/.test(id);
   }
 
-  let notificationRoutePromise = null;
-  const logNotificationRoute = (message, peer, detail = "") => {
-    const target = String(peer || "").replace(/^cm-/i, "").toLowerCase();
-  };
-  async function routeNotification(detail) {
-    if (notificationRoutePromise) return notificationRoutePromise;
-    const peer = String(detail?.sender || "").replace(/^cm-/i, "").toLowerCase();
-    if (!peer) {
-      logNotificationRoute("Klik notifikasi tanpa ID pengirim");
-      return false;
-    }
-    logNotificationRoute(detail.kind === "call" ? "Klik notifikasi panggilan" : "Klik notifikasi pesan", peer);
-    notificationRoutePromise = (async () => {
-      // Beri waktu sampai batas panggilan untuk masuk/login setelah membuka notifikasi.
-      const deadline = Date.now() + 60000;
-      while (Date.now() < deadline) {
-        const user = sessionStorage.getItem("callme-v2-session-user");
-        const token = sessionStorage.getItem("callme-v2-session-token");
-        const chat = window.CallMeChat;
-        if (user && token && typeof chat?.open === "function" && window.CallMeStorage) {
-          try {
-            if (detail.kind === "call" && detail.acceptCall) {
-              // Match APK: do not open a room or claim the call until this
-              // browser's PeerJS identity is registered and can receive media.
-              window.__callmeAutoAnswerPending = true;
-              const readyDeadline = Date.now() + 60000;
-              while (Date.now() < readyDeadline && !window.CallMeP2P?.isPeerReady?.())
-                await new Promise((resolve) => setTimeout(resolve, 250));
-              if (!window.CallMeP2P?.isPeerReady?.()) {
-                window.__callmeAutoAnswerPending = false;
-                logNotificationRoute("Jawaban tidak dikirim: PeerJS belum siap", peer);
-                return false;
-              }
-              window.CallMePush?.answerCall?.(peer, Boolean(detail.video), detail.callId || "");
-              logNotificationRoute("Jawaban otomatis dikirim; menunggu panggilan P2P", peer);
-            } else {
-              const contacts = (await window.CallMeStorage.all("contacts")) || [];
-              const contact = contacts.find((row) => normalize(row.peerId) === normalize(peer)) || { peerId: peer, display_name: peer };
-              await chat.open(contact);
-            }
-            const url = new URL(window.location.href);
-            ["cmOpenPeer", "cmNotificationKind", "cmAcceptCall", "cmCallMode", "cmCallId"].forEach((key) => url.searchParams.delete(key));
-            history.replaceState(null, "", url.pathname + url.search + url.hash);
-            return true;
-          } catch (error) {
-            console.warn("Gagal membuka chat dari notifikasi", error);
-            logNotificationRoute("Notifikasi gagal diproses", peer, error?.message || "error");
-            return false;
-          }
-        }
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-      logNotificationRoute("Notifikasi tidak diproses: sesi atau penyimpanan belum siap", peer);
-      return false;
-    })().finally(() => { notificationRoutePromise = null; });
-    return notificationRoutePromise;
-  }
-
   window.CallMeApp = Object.freeze({
     register,
     show,
@@ -105,27 +51,6 @@
     uid,
     roomId: window.CallMeIdentity.roomId,
     peerId: window.CallMeIdentity.peerId,
-    routeNotification,
-  });
-
-  navigator.serviceWorker?.addEventListener("message", (event) => {
-    if (event.data?.type === "callme:notification-open")
-      void routeNotification(event.data.detail || {});
-    if (event.data?.type === "callme:call-response") {
-      const detail = event.data.detail || {};
-      if (detail.kind === "call-accepted" || detail.kind === "call-declined")
-        window.dispatchEvent(new CustomEvent(`callme:fcm-${detail.kind}`, { detail: { peerId: detail.peerId || "" } }));
-    }
-  });
-  window.addEventListener("callme:session-user", () => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("cmOpenPeer")) void routeNotification({
-      sender: params.get("cmOpenPeer"),
-      kind: params.get("cmNotificationKind") || "message",
-      acceptCall: params.get("cmAcceptCall") === "1",
-      video: params.get("cmCallMode") === "video",
-      callId: params.get("cmCallId") || "",
-    });
   });
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -179,16 +104,6 @@
       sessionStorage.setItem("callme-v2-session-token", token);
       show("friends");
       window.CallMeP2P?.start(user);
-      const params = new URLSearchParams(window.location.search);
-      if (params.has("cmOpenPeer")) {
-        void routeNotification({
-          sender: params.get("cmOpenPeer"),
-          kind: params.get("cmNotificationKind") || "message",
-          acceptCall: params.get("cmAcceptCall") === "1",
-          video: params.get("cmCallMode") === "video",
-      callId: params.get("cmCallId") || "",
-        });
-      }
       return;
     }
 
