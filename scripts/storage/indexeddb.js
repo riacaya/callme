@@ -1,6 +1,6 @@
 (function () {
   const name = "callme-v2";
-  const version = 4;
+  const version = 5;
   const stores = ["contacts", "messages", "media", "settings", "unread"];
 
   function keyPathFor(store) {
@@ -16,7 +16,7 @@
 
       request.onupgradeneeded = () => {
         const db = request.result;
-          const version = 5;
+        if (db.objectStoreNames.contains("event-log"))
           db.deleteObjectStore("event-log");
         stores.forEach((store) => {
           if (!db.objectStoreNames.contains(store)) {
