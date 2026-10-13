@@ -1,6 +1,0 @@
-# Local secrets and generated files
-secrets/
-android-app/app/google-services.json
-*.keystore
-*.jks
-push-config.js
