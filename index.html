@@ -349,7 +349,76 @@ audio.chat-media { width: min(100%, 360px); }
   text-align: right;
 }
 .panel-settings [data-browser-push][data-push-active="true"]::after { content: "✓"; }
-</style></head>
+</style>
+<style>
+
+.admin-user{position:relative;display:grid;gap:4px;margin:8px 0;padding:12px 42px 12px 12px;border-radius:10px;background:var(--panel)}
+.admin-user small{font-size:.78rem;opacity:.75}
+.admin-user button{width:max-content;padding:6px 8px;border:0;border-radius:6px;background:var(--soft);color:var(--ink);font-size:.78rem}
+.admin-user .admin-delete{position:absolute;top:10px;right:10px;width:28px;height:28px;padding:0;border-radius:50%;background:#d92d3f;color:#fff;font-size:16px}
+
+.admin-contact{display:flex;align-items:center;gap:10px;margin:8px 0;padding:10px;border-radius:12px;background:var(--panel)}
+.admin-contact-avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;object-fit:cover}
+.admin-contact-info{display:flex;flex:1;min-width:0;flex-direction:column}
+.admin-contact-info strong,.admin-contact-info small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-contact-info strong{font-size:14px}
+.admin-contact-info small{font-size:11px}
+.admin-contact-actions{display:flex;gap:5px}
+.admin-contact-actions button{width:30px;height:30px;padding:0;border:0;border-radius:50%;background:var(--soft);color:var(--ink)}
+.admin-contact-actions .admin-delete{background:#d9534f;color:white}
+
+.admin-edit-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(90%,360px);display:flex;z-index:20;flex-direction:column;gap:8px;padding:18px;border-radius:14px;background:var(--panel);box-shadow:0 8px 30px #0005}
+.admin-edit-panel h3{text-align:center;margin:0}
+.admin-edit-panel input{padding:10px;border:1px solid #9aa3ad;border-radius:8px}
+.admin-edit-panel button{padding:9px;border:0;border-radius:8px;background:var(--accent);color:#fff}
+
+.admin-edit-panel{position:static;transform:none;width:100%;margin:12px 0;padding:16px;border-radius:12px;background:var(--soft);box-shadow:none}
+.admin-edit-panel .admin-contact-avatar{display:block;margin:0 auto 8px;width:64px;height:64px}
+
+.admin-edit-panel{position:absolute;inset:0;z-index:10;width:100%;height:100%;margin:0;padding:24px 16px;border-radius:0;background:var(--panel);box-shadow:none;overflow:auto}
+.admin-edit-panel .admin-contact-avatar{width:78px;height:78px;margin:8px auto 18px}
+
+.admin-password-form{display:flex;flex-direction:column;gap:8px;margin:8px 0 14px}
+.admin-password-form input,.admin-password-form button{padding:10px;border-radius:8px;border:1px solid #9aa3ad}
+.admin-password-form button{background:var(--accent);color:#fff;border:0}
+
+.admin-password-form{position:relative}
+.admin-password-form input{padding-right:42px}
+.admin-password-form .password-eye{position:absolute;right:7px;top:29px;width:30px;height:30px;padding:0;border:0;background:transparent;color:var(--ink);font-size:16px}
+
+.admin-edit-panel h3:before{content:'✎ ';font-size:.9em}
+
+.admin-contact-actions button:not(.admin-delete){background:transparent;border:1px solid color-mix(in srgb,var(--ink) 35%,transparent)}
+
+  .admin-contact-actions button:not(.admin-delete){border:0!important}
+
+  .admin-contact-actions{gap:8px!important}
+
+.admin-sync-progress{margin:8px 0 12px;padding:10px;border-radius:10px;background:var(--soft);font-size:12px}
+.admin-sync-progress-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px}
+.admin-sync-progress-track{height:7px;overflow:hidden;border-radius:99px;background:color-mix(in srgb,var(--ink) 18%,transparent)}
+.admin-sync-progress-bar{height:100%;width:0;border-radius:inherit;background:var(--accent);transition:width .2s ease}
+.admin-sync-progress-bar.is-running{background:linear-gradient(90deg,var(--accent) 25%,color-mix(in srgb,var(--accent) 45%,#fff) 50%,var(--accent) 75%);background-size:200% 100%;animation:admin-sync-slide 1s linear infinite}
+
+.panel-action-danger{border:0;background:transparent;color:var(--ink);font-size:20px;line-height:1;padding:4px 7px;cursor:pointer}
+.event-log-item{margin:6px 0;padding:8px;border-radius:8px;background:var(--panel);font-size:12px;overflow-wrap:anywhere}
+.panel-admin .admin-panel-action{display:block;width:100%;margin:8px auto;padding:9px 11px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--ink);font-size:14px;text-align:left;cursor:pointer}
+.panel-admin .admin-panel-action:hover{background:var(--soft);border-color:var(--accent)}
+.panel-admin .admin-sync-progress{font-size:11px}
+
+
+.panel-admin .admin-panel-action{text-align:center}
+.panel-admin .admin-sync-progress{padding:7px 0;background:transparent}
+.panel-admin .admin-sync-progress-row{display:flex;align-items:center;gap:8px}
+.panel-admin .admin-sync-progress-track{flex:1;height:5px}
+.panel-admin .admin-sync-progress-bar{height:5px}
+.panel-admin .admin-sync-info{margin:5px 0 12px;font-size:11px;text-align:center;color:var(--muted)}
+.panel-admin .admin-admin-actions{display:flex;flex-direction:column;gap:6px}
+.panel-admin .admin-panel-action{width:100%;margin:0;border:0;color:#fff;font-weight:600}
+.panel-admin .admin-turn-button{background:var(--accent)}
+.panel-admin .admin-sync-button{background:#3687c8}
+</style>
+</head>
 <body>
   <main id="app" class="app-shell">
     <div id="panel-outlet">
@@ -380,13 +449,15 @@ audio.chat-media { width: min(100%, 360px); }
         <form class="chat-compose" id="chat-compose"><span class="attachment-wrap"><button id="attach-button" type="button" aria-label="Lampiran"><img src="https://api.iconify.design/material-symbols/add.svg?color=%23fff" alt=""></button><span id="attachment-menu" class="attachment-menu" hidden><button type="button" data-pick="file">📁 File / Memory</button><button type="button" data-pick="photo">📷 Foto kamera</button><button type="button" data-pick="video">🎥 Video kamera</button><button type="button" data-pick="location">📍 Lokasi</button></span></span><input id="file-input" type="file" hidden><input id="photo-input" type="file" accept="image/*" capture="environment" hidden><input id="video-input" type="file" accept="video/*" capture="environment" hidden><input id="chat-text" placeholder="Ketik pesan..." autocomplete="off"><button id="chat-submit" type="submit" aria-label="Kirim"><img src="https://api.iconify.design/material-symbols/mic.svg?color=%23fff" alt=""></button></form>
       </section>
       <section data-panel="location" class="panel panel-location hidden"><header class="panel-header"><button class="panel-back" data-back="chatroom" aria-label="Kembali">‹</button><h1>📍 Lokasi</h1></header><div class="panel-content"><div class="location-wrap"><div class="location-map" id="location-map"><p class="location-status" id="location-status">Mencari lokasi…</p></div><div class="location-stats"><span id="location-time">⏱ 0 detik</span><span id="location-accuracy">Akurasi ±… m</span><span id="location-distance">Jarak 0 m</span></div><p class="location-coords" id="location-coords">Menunggu GPS…</p><button type="button" class="setting-action location-send" id="location-send" disabled>📍 Kirim lokasi</button></div></div></section><section data-panel="settings" class="panel panel-settings hidden">
-        <header class="panel-header"><button class="panel-back" data-back="friends" aria-label="Kembali">‹</button><h1>⚙️ Setting</h1></header><div class="panel-content"><button class="setting-action" data-open-panel="profile">✏️ Edit Profil</button><div class="language-setting"><label for="language-toggle">Bahasa</label><button type="button" id="language-toggle" class="language-toggle" aria-label="Ganti bahasa">EN</button></div><h2>Theme</h2><button class="setting-action" data-theme="senja">🌅 Senja</button><button class="setting-action" data-theme="natural">🌿 Natural</button><button class="setting-action" data-theme="dark">🌙 Dark</button><button class="setting-action" data-open-panel="about">About</button><button class="setting-action" data-logout>Log out</button></div>
+        <header class="panel-header"><button class="panel-back" data-back="friends" aria-label="Kembali">‹</button><h1>⚙️ Setting</h1></header><div class="panel-content"><button class="setting-action" data-open-panel="profile">✏️ Edit Profil</button><div class="language-setting"><label for="language-toggle">Bahasa</label><button type="button" id="language-toggle" class="language-toggle" aria-label="Ganti bahasa">EN</button></div><h2>Theme</h2><button class="setting-action" data-theme="senja">🌅 Senja</button><button class="setting-action" data-theme="natural">🌿 Natural</button><button class="setting-action" data-theme="dark">🌙 Dark</button><button class="setting-action admin-only" data-open-panel="admin">Administrator</button><button class="setting-action" data-open-panel="event-log">📋 Event log</button><button class="setting-action" data-open-panel="about">About</button><button class="setting-action" data-logout>Log out</button></div>
       </section>
       <section data-panel="profile" class="panel panel-profile hidden">
         <header class="panel-header"><button class="panel-back" data-back="settings" aria-label="Kembali">‹</button><h1>👤 Edit Profil</h1></header><div class="panel-content"><form id="profile-form"><label for="profile-photo">Foto profil</label><input id="profile-photo" type="file" accept="image/*"><label for="profile-name">Nama tampilan</label><input id="profile-name" required><label for="profile-phone">Nomor telepon</label><input id="profile-phone"><label for="profile-email">Email</label><input id="profile-email" type="email"><label for="profile-bio">Bio</label><textarea id="profile-bio" rows="3"></textarea><button type="submit">Simpan</button></form><p id="profile-status" role="status" aria-live="polite"></p></div>
       </section>
       <section data-panel="voice-call" class="panel panel-call hidden"><div class="voice-call-stage"><p id="voice-call-status">Siap memulai panggilan.</p><div class="voice-avatar" id="voice-avatar">👤</div><strong id="voice-call-name"></strong><audio id="voice-local" autoplay muted></audio><div class="call-controls"><button class="call-control call-control-accept" data-call-accept="voice" aria-label="Terima panggilan" hidden>☎</button><button class="call-control call-control-reject" data-call-reject="voice" aria-label="Tolak atau tutup panggilan">×</button></div></div></section>
       <section data-panel="video-call" class="panel panel-call hidden"><div class="video-call-stage"><video id="video-remote" autoplay playsinline></video><video id="video-local" autoplay muted playsinline></video><p id="video-call-status">Siap memulai panggilan.</p><strong id="video-call-name"></strong><div class="call-controls"><button class="call-control call-control-accept" data-call-accept="video" aria-label="Terima panggilan" hidden>☎</button><button class="call-control call-control-reject" data-call-reject="video" aria-label="Tolak atau tutup panggilan">×</button></div></div></section>
+      <section data-panel="event-log" class="panel panel-event-log hidden"><header class="panel-header"><button class="panel-back" data-back="settings" aria-label="Kembali">‹</button><h1>📋 Event log</h1><button class="panel-action-danger" data-clear-event-log aria-label="Hapus semua event log" title="Hapus semua event log">🗑️</button></header><div class="panel-content"><div id="event-log-list"></div></div></section>
+      <section data-panel="admin" class="panel panel-admin hidden"><header class="panel-header"><button class="panel-back" data-back="settings" aria-label="Kembali">‹</button><h1>🛠 Administrator</h1></header><div class="panel-content"><div class="admin-sync-progress" aria-live="polite"><div class="admin-sync-progress-row"><div class="admin-sync-progress-track"><div id="admin-sync-bar" class="admin-sync-progress-bar"></div></div><strong id="admin-sync-percent">0%</strong></div></div><p id="admin-sync-label" class="admin-sync-info">Siap menyinkronkan</p><div class="admin-admin-actions"><button type="button" class="admin-panel-action admin-sync-button" id="admin-sync-database">Sinkronkan Database</button></div><div id="admin-users"></div></div></section>
       <section data-panel="about" class="panel panel-about hidden">
         <header class="panel-header"><button class="panel-back" data-back="settings" aria-label="Kembali">‹</button><h1>ⓘ About</h1></header><div class="panel-content about-content"><img class="about-logo" src="assets/logo.png" alt="Logo CallMe"><h2>CallMe</h2><p>Privat Call</p><p class="about-version about-gap-after">Versi 2</p><p class="about-description about-gap-after">Aplikasi komunikasi peer-to-peer.</p><p>Telp: +6282338013610</p><p>Email: riacaya99@gmail.com</p></div>
       </section>
@@ -421,6 +492,8 @@ audio.chat-media { width: min(100%, 360px); }
   <script src="scripts/features/location.js"></script>
   
   
+  <script src="scripts/core/event-log.js"></script>
+  <script src="scripts/features/admin.js"></script>
   <script src="scripts/features/settings.js"></script>
   <script src="scripts/i18n/locale-id.js"></script><script src="scripts/i18n/locale-en.js"></script>
   <script src="scripts/i18n/translator.js"></script>
