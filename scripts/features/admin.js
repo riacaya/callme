@@ -1,7 +1,23 @@
 (function () {
   const API = "https://script.google.com/macros/s/AKfycby-8P8p94mCSoZGPRECwjKw7wPR2de6R1zPQRJoWDHBQ4FVBERV7RZdRtCv1Laps5LZ/exec";
   document.addEventListener("DOMContentLoaded", () => {
-    const panel = document.querySelector('[data-panel="admin"]'), list = document.getElementById("admin-users"), syncLabel = document.getElementById("admin-sync-label"), status = syncLabel, syncPercent = document.getElementById("admin-sync-percent"), syncBar = document.getElementById("admin-sync-bar"), syncButton = document.getElementById("admin-sync-database"); if (!panel || !list) return;
+    const panel = document.querySelector('[data-panel="admin"]'), list = document.getElementById("admin-users"), syncLabel = document.getElementById("admin-sync-label"), status = syncLabel, syncPercent = document.getElementById("admin-sync-percent"), syncBar = document.getElementById("admin-sync-bar"), turnTest = document.getElementById("admin-turn-test"), syncButton = document.getElementById("admin-sync-database"); if (!panel || !list) return;
+    turnTest?.addEventListener("click", async () => {
+      const self = String(sessionStorage.getItem("callme-v2-session-user") || "").replace(/^cm-/i, "").toLowerCase();
+      const target = self === "aurora" ? "riacaya" : "aurora";
+      turnTest.disabled = true;
+      status.textContent = `Menguji TURN ke ${target}…`;
+      try {
+        const testTurn = window.CallMeTransport?.testTurn;
+        if (typeof testTurn !== "function") throw new Error("Fitur uji TURN belum dimuat.");
+        await testTurn(target);
+        status.textContent = `TURN berhasil ke ${target}. Pesan uji dan balasan diterima.`;
+        window.CallMeEventLog?.log?.("P2P", "Uji TURN berhasil", `${self} ↔ ${target}`);
+      } catch (error) {
+        status.textContent = `TURN gagal: ${error.message}`;
+        window.CallMeEventLog?.log?.("P2P", "Uji TURN gagal", error.message);
+      } finally { turnTest.disabled = false; }
+    });
     const progress = (percent, label, running = true) => { if (syncPercent) syncPercent.textContent = `${percent}%`; if (syncLabel) syncLabel.textContent = label; if (syncBar) { syncBar.style.width = `${percent}%`; syncBar.classList.toggle("is-running", running && percent < 100); } };
     const call = async (action, extra = {}) => {
       const controller = new AbortController();
