@@ -804,6 +804,69 @@
   function isPeerReady() {
     return Boolean(peer && !peer.destroyed && peer.open && peer.id);
   }
+  async function testTurn(target) {
+    const self = normalizePeerIdentity(lastIdentity || sessionStorage.getItem("callme-v2-session-user"));
+    const other = normalizePeerIdentity(target);
+    if (!/^(aurora|riacaya)$/.test(self) || !/^(aurora|riacaya)$/.test(other) || self === other) throw new Error("Uji TURN hanya untuk Aurora dan Riacaya.");
+    if (typeof Peer !== "function") throw new Error("PeerJS belum tersedia.");
+    const testSelf = `cm-test-${self}`;
+    const testOther = `cm-test-${other}`;
+    const testPeer = new Peer(testSelf, { debug: 0, config: { iceServers: TURN_SERVERS, iceTransportPolicy: "relay", sdpSemantics: "unified-plan" } });
+    const cleanup = () => { try { testPeer.destroy(); } catch {} };
+    // Jendela 30 detik + percobaan ulang otomatis: uji harus berhasil dengan
+    // urutan klik bebas (siapa pun yang menekan duluan) tanpa refresh.
+    const WINDOW_MS = 30000;
+    try {
+      if (self === "aurora") {
+        await new Promise((resolve, reject) => {
+          let settled = false;
+          const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); fn(value); };
+          const timer = setTimeout(() => finish(reject, new Error("Menunggu koneksi dari cm-test-riacaya timeout.")), WINDOW_MS);
+          // Pasang SEMUA listener sebelum menunggu: mendaftarkan listener
+          // "connection" setelah event "open" membuka celah koneksi hilang
+          // bila sisi penghubung sudah menekan lebih dulu.
+          testPeer.on("error", (error) => finish(reject, new Error(error?.type || error?.message || "Peer test gagal")));
+          testPeer.on("connection", (connection) => {
+            connection.on("data", (data) => {
+              if (data?.kind !== "TURN_TEST") return;
+              try { connection.send({ kind: "TURN_ACK", id: data.id }); } catch {}
+              finish(resolve, true);
+            });
+          });
+        });
+      } else {
+        await new Promise((resolve, reject) => {
+          let settled = false, connection = null, timer = null;
+          const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); fn(value); };
+          const deadline = Date.now() + WINDOW_MS;
+          const attempt = () => {
+            clearTimeout(timer);
+            if (settled) return;
+            if (connection) { try { connection.close(); } catch {} }
+            connection = testPeer.connect(testOther, { reliable: true });
+            connection.on("open", () => { try { connection.send({ kind: "TURN_TEST", id: `turn-test-${Date.now()}` }); } catch {} });
+            connection.on("data", (data) => { if (data?.kind === "TURN_ACK") finish(resolve, true); });
+            // Tiap percobaan diberi waktu 4 detik; EXPIRE (lawan belum
+            // mendaftar) tidak menutup koneksi PeerJS, jadi kita ulangi sendiri.
+            timer = setTimeout(() => {
+              if (settled) return;
+              if (Date.now() >= deadline) { finish(reject, new Error("Koneksi test TURN timeout.")); return; }
+              attempt();
+            }, 4000);
+          };
+          testPeer.on("error", (error) => {
+            // Lawan belum ada / WebRTC gagal adalah kondisi normal saat
+            // percobaan ulang; jangan gagalkan seluruh uji.
+            if (error?.type === "peer-unavailable" || error?.type === "webrtc") return;
+            finish(reject, new Error(error?.type || error?.message || "Peer test gagal"));
+          });
+          attempt();
+        });
+      }
+      return true;
+    } finally { cleanup(); }
+  }
+
   function getRoute(peerId) {
     return routeByPeer.get(`cm-${normalizePeerIdentity(peerId)}`) || "";
   }
@@ -830,5 +893,6 @@
     hasConnection,
     isPeerReady,
     getRoute,
+    testTurn,
   };
 })();
