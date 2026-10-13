@@ -39,7 +39,17 @@
       if (!roomId) return null;
       if (direction === "outgoing" && callEnded) return null;
       const row = { id: window.CallMeApp.uid(), kind: "call-log", callType, direction, status: "started", roomId, mine: true, createdAt: Date.now() };
-      await window.CallMeStorage?.put?.("messages", row);
+      // A stalled IndexedDB upgrade must not prevent P2P probing or the FCM
+      // wake-up path from starting. Keep the log best-effort and cap its wait.
+      const persist = Promise.resolve()
+        .then(() => window.CallMeStorage?.put?.("messages", row))
+        .catch((error) => { console.warn("Call log could not be saved", error); });
+      let saveTimer;
+      await Promise.race([
+        persist,
+        new Promise((resolve) => { saveTimer = setTimeout(resolve, 1200); }),
+      ]);
+      clearTimeout(saveTimer);
       window.dispatchEvent(new CustomEvent("callme:call-log", { detail: row }));
       return row;
     };
