@@ -23,8 +23,8 @@
         if (data.kind === "call") {
           options.requireInteraction = true;
           options.actions = [
-            { action: "answer", title: "Jawab", icon: new URL("assets/call-answer.svg", window.location.href).href },
-            { action: "decline", title: "Tolak", icon: new URL("assets/call-decline.svg", window.location.href).href },
+            { action: "answer", title: "Jawab", icon: new URL("assets/call-decline.svg", window.location.href).href },
+            { action: "decline", title: "Tolak", icon: new URL("assets/call-answer.svg", window.location.href).href },
           ];
         }
         void ensureWorker().then(function (worker) { return worker.showNotification(title, options); });
@@ -132,11 +132,13 @@
     if (!result || !result.ok) throw new Error(result && result.error || "Pendaftaran push browser gagal.");
     localStorage.setItem("callme-web-push-peer", bare(user));
     localStorage.setItem("callme-web-push-token", token);
+    localStorage.removeItem("callme-web-push-disabled");
     return token;
   }
 
   function refreshBrowserPush() {
     var user = me();
+    if (localStorage.getItem("callme-web-push-disabled") === "true") return Promise.resolve(false);
     if (!user || !sessionStorage.getItem("callme-v2-session-token") || !("Notification" in window) || Notification.permission !== "granted") return Promise.resolve(false);
     if (tokenRefreshPromise) return tokenRefreshPromise;
     tokenRefreshPromise = ensureWorker().then(async function (worker) {
@@ -170,13 +172,12 @@
   function updateBrowserPushStatus(active) {
     var button = document.querySelector('[data-browser-push="enable"]');
     if (!button) return;
-    button.textContent = active
-      ? "Notifikasi browser aktif"
-      : "Notifikasi belum aktif — tekan untuk mengaktifkan";
+    button.textContent = document.documentElement.lang === "en" ? "Notifications" : "Notifikasi";
     button.dataset.pushActive = active ? "true" : "false";
+    button.setAttribute("aria-pressed", active ? "true" : "false");
     button.title = active
-      ? "Token browser sudah terdaftar pada layanan push."
-      : "Izin browser saja belum menjamin token push terdaftar.";
+      ? (document.documentElement.lang === "en" ? "Click to turn browser notifications off." : "Klik untuk menonaktifkan notifikasi browser.")
+      : (document.documentElement.lang === "en" ? "Click to turn browser notifications on." : "Klik untuk mengaktifkan notifikasi browser.");
   }
 
   async function disableBrowserPush() {
@@ -223,17 +224,25 @@
     var button = document.createElement("button");
     button.type = "button";
     button.className = "setting-action";
-    button.textContent = "Memeriksa status notifikasi browser...";
+    button.textContent = "Notifikasi";
+    button.dataset.i18nSource = "Notifikasi";
     button.dataset.browserPush = "enable";
     settings.prepend(button);
     button.dataset.pushActive = "false";
     button.addEventListener("click", async function () {
+      var wasActive = button.dataset.pushActive === "true";
       button.disabled = true;
       try {
-        await registerBrowserPush();
-        updateBrowserPushStatus(true);
+        if (wasActive) {
+          await disableBrowserPush();
+          localStorage.setItem("callme-web-push-disabled", "true");
+          updateBrowserPushStatus(false);
+        } else {
+          await registerBrowserPush();
+          updateBrowserPushStatus(true);
+        }
       } catch (error) {
-        updateBrowserPushStatus(false);
+        updateBrowserPushStatus(wasActive);
         alert(error.message || "Notifikasi browser gagal diaktifkan.");
       } finally { button.disabled = false; }
     });
