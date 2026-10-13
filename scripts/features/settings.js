@@ -5,7 +5,7 @@
 
     const icons = new Map([
       ["Edit Profil", "👤"], ["Install APK", "📲"], ["Bahasa", "🌐"],
-      ["Senja", "🌅"], ["Natural", "🌿"], ["Dark", "🌙"],
+      ["Senja", "🌅"], ["Natural", "🌿"], ["Dark", "🌙"], ["Administrator", "🛠️"],
       ["About", "ℹ️"], ["Log out", "↪️"],
     ]);
     panel.querySelectorAll("button").forEach((button) => {
@@ -18,6 +18,43 @@
       mark.setAttribute("aria-hidden", "true");
       button.prepend(mark, document.createTextNode(" "));
     });
+
+    const eventList = document.getElementById("event-log-list");
+    const loadEventLog = async () => {
+      if (!eventList) return;
+      const activeUser = (window.CallMeApp?.normalize?.(sessionStorage.getItem("callme-v2-session-user") || "") || "").replace(/^cm-/i, "");
+      const rows = (await window.CallMeStorage?.all?.("event-log") || [])
+        .filter((row) => (window.CallMeApp?.normalize?.(row.user || "") || "").replace(/^cm-/i, "") === activeUser)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 200);
+      eventList.replaceChildren(...rows.map((row) => {
+        const item = document.createElement("p");
+        item.className = "event-log-item";
+        item.textContent = `${new Date(row.createdAt).toLocaleString("id-ID")} · ${row.type} · ${row.message}${row.detail ? ` · ${row.detail}` : ""}`;
+        return item;
+      }));
+    };
+    window.addEventListener("callme:panel-change", (event) => {
+      if (event.detail?.panel === "event-log") void loadEventLog();
+    });
+    panel.parentElement?.querySelector("[data-clear-event-log]")?.addEventListener("click", async () => {
+      if (!confirm("Hapus semua Event log lokal akun ini?")) return;
+      const activeUser = (window.CallMeApp?.normalize?.(sessionStorage.getItem("callme-v2-session-user") || "") || "").replace(/^cm-/i, "");
+      const rows = await window.CallMeStorage?.all?.("event-log") || [];
+      await window.CallMeStorage?.replace?.("event-log", rows.filter((row) => (row.user || "").replace(/^cm-/i, "") !== activeUser));
+      eventList?.replaceChildren();
+    });
+    const adminButton = panel.querySelector('[data-open-panel="admin"]');
+    const isAdmin = (identity) => /^(riacaya|aurora)$/.test(
+      (window.CallMeApp?.normalize?.(identity || "") || "").replace(/^cm-/i, ""),
+    );
+    const showAdmin = (identity) => {
+      if (!adminButton) return;
+      const visible = isAdmin(identity);
+      adminButton.hidden = !visible;
+      adminButton.style.display = visible ? "" : "none";
+    };
+    showAdmin(sessionStorage.getItem("callme-v2-session-user"));
+    window.addEventListener("callme:session-user", (event) => showAdmin(event.detail?.user));
 
     const markTheme = (active) => panel.querySelectorAll("[data-theme]").forEach((button) => {
       let mark = button.querySelector(".theme-check");
