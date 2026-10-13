@@ -300,7 +300,13 @@
           .toLowerCase()
           .includes(value.toLowerCase()),
       );
-      if (!found && needle && window.CallMeApp?.isAllowedIdentity?.(needle)) {
+      const allowed = needle && window.CallMeApp?.isAllowedIdentity?.(needle);
+      if (allowed) {
+        // Kontak server bisa masih ada di IndexedDB setelah ditandai terhapus.
+        // Saat pengguna mencari ID itu lagi, hapus penanda agar kontak muncul.
+        await window.CallMeStorage.remove("settings", `deleted-contact:${needle}`);
+      }
+      if (!found && allowed) {
         await window.CallMeStorage.put("contacts", {
           peerId: needle,
           phone: needle,
@@ -309,7 +315,6 @@
           email: "",
           savedAt: Date.now(),
         });
-        await window.CallMeStorage.remove("settings", `deleted-contact:${needle}`);
         scanFinished = false;
         query.value = "";
         await load("");
