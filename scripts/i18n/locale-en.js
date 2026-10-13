@@ -5,6 +5,7 @@
     "🌿 Natural": "🌿 Natural",
     "🌙 Dark": "🌙 Dark",
     Bahasa: "Language",
+    Notifikasi: "Notifications",
     "Bahasa Indonesia": "Indonesian",
     "Nomor HP atau Peer ID": "Phone number or Peer ID",
     Cari: "Search",
