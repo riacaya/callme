@@ -6,7 +6,7 @@
     const icons = new Map([
       ["Edit Profil", "👤"], ["Install APK", "📲"], ["Bahasa", "🌐"],
       ["Senja", "🌅"], ["Natural", "🌿"], ["Dark", "🌙"],
-      ["About", "ℹ️"], ["Log out", "↪️"],
+      ["Ekspor Chat", "📦"], ["About", "ℹ️"], ["Log out", "↪️"],
     ]);
     panel.querySelectorAll("button").forEach((button) => {
       const label = button.textContent.trim();
