@@ -16,7 +16,7 @@
 
       request.onupgradeneeded = () => {
         const db = request.result;
-        if (db.objectStoreNames.contains("event-log"))
+          const version = 5;
           db.deleteObjectStore("event-log");
         stores.forEach((store) => {
           if (!db.objectStoreNames.contains(store)) {
