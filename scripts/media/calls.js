@@ -307,13 +307,14 @@
           }
         });
         // PeerJS MediaConnection yang berhasil dibuat belum berarti lawan
-        // menerima panggilan. Jangan biarkan UI/sesi lama terlihat hidup.
+        // menerima panggilan. Beri waktu lebih (wake/auto-jawab/jaringan lambat)
+        // sebelum mengakhiri sesi.
         session.connectTimer = setTimeout(() => {
           if (callSession === session && currentCall === attempt && !remoteReceived) {
             status.textContent = "Tidak ada jawaban dari penerima.";
             finish(false);
           }
-        }, 8000);
+        }, 30000);
         return true;
       } catch (error) {
         status.textContent = mediaErrorMessage(error, "Gagal memulai panggilan");
@@ -379,7 +380,7 @@
           session.waitingForAnswer = false;
           if (session.logId) void updateCallLog(session.logId, target, "missed");
           finish(false);
-        }, 60000);
+        }, 30000);
         // Fallback: probe/presence bisa gagal walau peer sebenarnya hidup & siap.
         // Coba mulai P2P media juga sambil menunggu sinyal "accepted" (wake/push),
         // dengan jeda bertahap agar tidak spam.
@@ -469,7 +470,7 @@
           });
           session.connectTimer = setTimeout(() => {
             if (callSession === session && currentCall === incoming && !remoteReceived) finish(false);
-          }, 8000);
+          }, 30000);
           incoming.answer(localStream);
           window.CallMeAndroid?.answeredCall?.();
           status.textContent = "Menghubungkan...";
