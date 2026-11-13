@@ -366,7 +366,8 @@
         void startOutgoingP2P(mode, target, session);
       } else {
         session.waitingForAnswer = true;
-        status.textContent = "Menunggu jawaban...";
+        const p2pReady = window.CallMeP2P?.isPeerReady?.();
+        status.textContent = p2pReady ? "Menunggu jawaban..." : "Koneksi P2P belum siap, menunggu jawaban lewat notifikasi...";
         window.CallMePush?.call?.(target, mode === "video", session.logId);
         callSession.answerTimer = setTimeout(() => {
           if (callSession !== session || !session.waitingForAnswer) return;
