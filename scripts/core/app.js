@@ -17,6 +17,7 @@
   }
 
   function show(name) {
+    if (!panels.has(name)) name = panels.has("friends") ? "friends" : [...panels.keys()][0];
     panels.forEach((panel, key) => {
       panel.classList.toggle("hidden", key !== name);
     });
@@ -132,31 +133,32 @@
     document
       .querySelectorAll("[data-panel]")
       .forEach((panel) => register(panel.dataset.panel, panel));
-    document
-      .querySelectorAll("[data-back]")
-      .forEach((button) =>
-        button.addEventListener("click", () => show(button.dataset.back)),
-      );
-    document
-      .querySelectorAll("[data-open-panel]")
-      .forEach((button) =>
-        button.addEventListener("click", () => {
-          const target = button.dataset.openPanel;
-          if (target === "settings") {
-            const menu = document.getElementById("main-menu");
-            const backdrop = document.getElementById("main-menu-backdrop");
-            const btn = document.getElementById("main-menu-btn");
-            if (menu && backdrop) {
-              menu.classList.add("open");
-              backdrop.classList.add("open");
-              menu.setAttribute("aria-hidden", "false");
-              btn && btn.setAttribute("aria-expanded", "true");
-              return;
-            }
-          }
-          show(target);
-        }),
-      );
+    document.addEventListener("click", (event) => {
+      const back = event.target.closest("[data-back]");
+      if (back) {
+        event.preventDefault();
+        show(back.dataset.back);
+        return;
+      }
+      const open = event.target.closest("[data-open-panel]");
+      if (!open) return;
+      const target = open.dataset.openPanel;
+      if (target === "settings") {
+        const menu = document.getElementById("main-menu");
+        const backdrop = document.getElementById("main-menu-backdrop");
+        const btn = document.getElementById("main-menu-btn");
+        if (menu && backdrop) {
+          event.preventDefault();
+          menu.classList.add("open");
+          backdrop.classList.add("open");
+          menu.setAttribute("aria-hidden", "false");
+          btn && btn.setAttribute("aria-expanded", "true");
+        }
+        return;
+      }
+      event.preventDefault();
+      show(target);
+    });
 
     const remembered = localStorage.getItem("callme-v2-persistent-session");
     const sessionUser = sessionStorage.getItem("callme-v2-session-user");
