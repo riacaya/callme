@@ -19,6 +19,7 @@
     var video = incoming.metadata && (incoming.metadata.video === true || incoming.metadata.video === "true");
     post("incoming-call", {
       peerId: peer,
+      callMode: video ? "video" : "voice",
       title: "Panggilan masuk",
       body: (video ? "Panggilan video" : "Panggilan suara") + " dari " + senderName(peer)
     });
@@ -44,4 +45,21 @@
       body: text.slice(0, 180)
     });
   });
+
+  try {
+    host.addEventListener("message", function (event) {
+      var data = event && event.data;
+      if (!data) return;
+      if (typeof data === "string") { try { data = JSON.parse(data); } catch (_) { return; } }
+      if (data.type !== "call-action") return;
+      var action = String(data.action || "");
+      if (action === "accept") {
+        var accept = document.querySelector('[data-call-accept]:not([hidden])');
+        if (accept) accept.click();
+      } else if (action === "reject") {
+        var reject = document.querySelector('[data-call-reject]');
+        if (reject) reject.click();
+      }
+    });
+  } catch (_) {}
 })();
