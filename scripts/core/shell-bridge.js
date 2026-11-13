@@ -46,6 +46,13 @@
     });
   });
 
+  function tryClick(selector, attemptsLeft) {
+    var el = document.querySelector(selector);
+    if (el) { try { el.click(); } catch (_) {} return; }
+    if (attemptsLeft <= 0) return;
+    setTimeout(function () { tryClick(selector, attemptsLeft - 1); }, 150);
+  }
+
   try {
     host.addEventListener("message", function (event) {
       var data = event && event.data;
@@ -54,11 +61,10 @@
       if (data.type !== "call-action") return;
       var action = String(data.action || "");
       if (action === "accept") {
-        var accept = document.querySelector('[data-call-accept]:not([hidden])');
-        if (accept) accept.click();
+        // retry until incoming call UI is ready
+        tryClick('[data-call-accept]:not([hidden])', 40);
       } else if (action === "reject") {
-        var reject = document.querySelector('[data-call-reject]');
-        if (reject) reject.click();
+        tryClick('[data-call-reject]', 40);
       }
     });
   } catch (_) {}

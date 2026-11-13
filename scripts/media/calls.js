@@ -386,15 +386,19 @@
       .querySelectorAll("[data-call-reject]")
       .forEach((button) =>      button.addEventListener("click", async () => {
         const incoming = pendingIncoming?.incoming;
-        if (incoming) await activateCallRoom(incoming.peer || incoming.peerId);
+        const target = incoming?.peer || incoming?.peerId;
+        if (incoming) await activateCallRoom(target);
         if (incoming && pendingIncoming?.incoming !== incoming) return;
         if (incoming) {
           if (callSession?.logId)
-            updateCallLog(callSession.logId, incoming.peer, "rejected");
+            void updateCallLog(callSession.logId, target, "rejected");
           if (callSession) callSession.rejected = true;
+          if (target) {
+            try { window.CallMeP2P?.sendCallControl?.({ kind: "call-declined", callLogId: callSession?.logId || "" }, target); } catch (_) {}
+          }
         }
         window.CallMeAndroid?.cancelCall?.();
-        finish();
+        finish(false);
       }));
     document.querySelectorAll("[data-call-accept]").forEach((button) => {
       button.innerHTML = '<img src="https://api.iconify.design/material-symbols/call.svg?color=%23fff" alt="">';
@@ -478,6 +482,18 @@
     window.addEventListener("callme:p2p-message", (event) => {
       const detail = event.detail || {};
       if (detail.kind === "call-hangup") {
+        finish(false);
+        return;
+      }
+      if (detail.kind === "call-declined") {
+        const peerId = detail.senderPeerId || detail.peerId || "";
+        if (callSession?.kind === "outgoing" && peerId &&
+            String(peerId).replace(/^cm-/i, "").toLowerCase() ===
+            String(callSession.peerId || "").replace(/^cm-/i, "").toLowerCase()) {
+          callSession.waitingForAnswer = false;
+          if (callSession.answerTimer) clearTimeout(callSession.answerTimer);
+          if (callSession.logId) void updateCallLog(callSession.logId, callSession.peerId, "rejected");
+        }
         finish(false);
         return;
       }
