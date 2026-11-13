@@ -576,9 +576,22 @@
       window.CallMeApp.show(`${mode}-call`);
       setIncomingControls(view, true);
       status.textContent = mode === "video" ? "Panggilan video masuk" : "Panggilan suara masuk";
-      if (window.__callmeAutoAnswerPending) {
+      const tryAutoAnswer = () => {
+        if (!window.__callmeAutoAnswerPending) return false;
+        const btn = view.querySelector(`[data-call-accept="${mode}"]`);
+        if (!btn || btn.hidden || pendingIncoming?.incoming !== incoming) return false;
         window.__callmeAutoAnswerPending = false;
-        view.querySelector(`[data-call-accept="${mode}"]`)?.click();
+        btn.click();
+        return true;
+      };
+      if (!tryAutoAnswer()) {
+        let attempts = 0;
+        const timer = setInterval(() => {
+          attempts++;
+          if (tryAutoAnswer() || !window.__callmeAutoAnswerPending || pendingIncoming?.incoming !== incoming || attempts > 40) {
+            clearInterval(timer);
+          }
+        }, 150);
       }
       incoming.on("error", () => {
         if (pendingIncoming?.incoming === incoming) status.textContent = "Panggilan gagal";
