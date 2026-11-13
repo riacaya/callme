@@ -3,8 +3,10 @@
     const list = document.getElementById("friend-list"),
       form = document.getElementById("friend-search"),
       query = document.getElementById("friend-query"),
-      label = document.getElementById("active-user-label");
+      label = document.getElementById("active-user-label"),
+      searchStatus = document.getElementById("friend-search-status");
     if (!list || !form || !query) return;
+    const setSearchStatus = (text = "") => { if (searchStatus) searchStatus.textContent = text; };
     const updateUserLabel = () => {
       if (label)
         label.textContent =
@@ -280,11 +282,18 @@
             return item;
           }),
       );
+      if (filter && list.children.length === 0 && !searchStatus?.textContent) {
+        setSearchStatus("Tidak ada teman yang cocok.");
+      } else if (!filter || list.children.length > 0) {
+        if (searchStatus && (searchStatus.textContent === "Tidak ada teman yang cocok." || searchStatus.textContent.startsWith("ID tidak valid"))) setSearchStatus("");
+      }
       if (!filter) scanPresence();
     }
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const value = query.value.trim();
+      setSearchStatus("");
+      if (!value) { await load("", true); return; }
       const rows = (await window.CallMeStorage?.all?.("contacts")) || [];
       const needle = (window.CallMeApp?.normalize?.(value) || value)
         .replace(/^cm-/i, "")
@@ -301,22 +310,31 @@
         await window.CallMeStorage.remove("settings", `deleted-contact:${needle}`);
       }
       if (!found && allowed) {
-        await window.CallMeStorage.put("contacts", {
-          peerId: needle,
-          phone: needle,
-          display_name: needle,
-          profile_photo: "",
-          email: "",
-          savedAt: Date.now(),
-        });
-        scanFinished = false;
-        query.value = "";
-        await load("");
+        try {
+          await window.CallMeStorage.put("contacts", {
+            peerId: needle,
+            phone: needle,
+            display_name: needle,
+            profile_photo: "",
+            email: "",
+            savedAt: Date.now(),
+          });
+          scanFinished = false;
+          query.value = "";
+          setSearchStatus("Teman ditambahkan.");
+          await load("");
+        } catch (error) {
+          console.warn("Gagal menambah teman", error);
+          setSearchStatus("Gagal menambah teman. Coba lagi.");
+        }
         return;
       }
-      load(value);
+      if (!found && !allowed) {
+        setSearchStatus("ID tidak valid atau teman tidak ditemukan. Gunakan nomor HP (62...) atau username yang diizinkan.");
+      }
+      await load(value);
     });
-    query.addEventListener("input", () => load(query.value.trim(), true));
+    query.addEventListener("input", () => { setSearchStatus(""); load(query.value.trim(), true); });
     window.addEventListener("callme:p2p-message", async (event) => {
       const d = event.detail || {};
       if (d.kind === "room-active" && d.senderPeerId) {
