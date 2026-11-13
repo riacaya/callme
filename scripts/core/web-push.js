@@ -31,6 +31,18 @@
     }
   }
 
+  var LAST_KEY = "callme-v2-web-push-last";
+
+  function readLast() {
+    try { return JSON.parse(localStorage.getItem(LAST_KEY) || "null"); } catch (_) { return null; }
+  }
+  function writeLast(peerId, token) {
+    try {
+      if (peerId && token) localStorage.setItem(LAST_KEY, JSON.stringify({ peerId: peerId, token: token }));
+      else localStorage.removeItem(LAST_KEY);
+    } catch (_) {}
+  }
+
   var state = {
     initPromise: null,
     messaging: null,
@@ -97,10 +109,21 @@
           var opts = { vapidKey: cfg.vapidPublicKey, serviceWorkerRegistration: reg };
           return messaging.getToken(opts).then(function (token) {
             if (!token) return null;
-            if (!force && state.token === token && state.user === user) return token;
-            state.token = token;
-            state.user = user;
-            return post("push-register", { peerId: user, webToken: token }).then(function () { return token; });
+            var last = readLast() || {};
+            // Lepas token ini dari akun lain agar notif hanya untuk akun login saat ini.
+            var movePromise = Promise.resolve(null);
+            if (last.token === token && last.peerId && last.peerId !== user) {
+              movePromise = post("push-unregister", { peerId: last.peerId, webToken: token }).catch(function () { return null; });
+            }
+            return movePromise.then(function () {
+              if (!force && state.token === token && state.user === user && last.peerId === user && last.token === token) return token;
+              state.token = token;
+              state.user = user;
+              return post("push-register", { peerId: user, webToken: token }).then(function () {
+                writeLast(user, token);
+                return token;
+              });
+            });
           }).catch(function () { return null; });
         });
       });
@@ -108,16 +131,20 @@
   }
 
   function unregister() {
-    var user = state.user || currentUser();
-    var token = state.token;
+    var last = readLast() || {};
+    var user = state.user || currentUser() || last.peerId || "";
+    var token = state.token || last.token || "";
     if (state.messaging && token) {
       try { state.messaging.deleteToken(token).catch(function () {}); } catch (_) {}
     }
     state.token = "";
-    // keep state.user for unregister call context if needed
-    if (!user || !token) return Promise.resolve(null);
+    if (!user || !token) {
+      writeLast("", "");
+      return Promise.resolve(null);
+    }
     return post("push-unregister", { peerId: user, webToken: token }).then(function (res) {
       state.user = "";
+      if (last.token === token) writeLast("", "");
       return res;
     });
   }
