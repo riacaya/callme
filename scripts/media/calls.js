@@ -380,6 +380,19 @@
           if (session.logId) void updateCallLog(session.logId, target, "missed");
           finish(false);
         }, 60000);
+        // Fallback: probe/presence bisa gagal walau peer sebenarnya hidup & siap.
+        // Coba mulai P2P media juga sambil menunggu sinyal "accepted" (wake/push),
+        // dengan jeda bertahap agar tidak spam.
+        void (async () => {
+          const delays = [1200, 3000, 3000, 4000, 5000];
+          for (const delay of delays) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            if (callSession !== session || callEnded || !session.waitingForAnswer) return;
+            if (currentCall || remoteReceived) return;
+            const started = await startOutgoingP2P(mode, target, session);
+            if (started || currentCall || remoteReceived) return;
+          }
+        })();
       }
     }
     document
