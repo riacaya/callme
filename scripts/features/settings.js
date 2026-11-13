@@ -1,6 +1,6 @@
 (function () {
   document.addEventListener("DOMContentLoaded", () => {
-    const panel = document.querySelector('[data-panel="settings"]');
+    const panel = document.querySelector('[data-panel="settings"]') || document.getElementById("main-menu");
     if (!panel) return;
 
     const icons = new Map([

@@ -140,7 +140,22 @@
     document
       .querySelectorAll("[data-open-panel]")
       .forEach((button) =>
-        button.addEventListener("click", () => show(button.dataset.openPanel)),
+        button.addEventListener("click", () => {
+          const target = button.dataset.openPanel;
+          if (target === "settings") {
+            const menu = document.getElementById("main-menu");
+            const backdrop = document.getElementById("main-menu-backdrop");
+            const btn = document.getElementById("main-menu-btn");
+            if (menu && backdrop) {
+              menu.classList.add("open");
+              backdrop.classList.add("open");
+              menu.setAttribute("aria-hidden", "false");
+              btn && btn.setAttribute("aria-expanded", "true");
+              return;
+            }
+          }
+          show(target);
+        }),
       );
 
     const remembered = localStorage.getItem("callme-v2-persistent-session");
