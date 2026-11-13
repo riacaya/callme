@@ -428,6 +428,12 @@ audio.chat-media { width: min(100%, 360px); }
         <div class="main-menu-body panel-content settings-menu-content"><button class="setting-action" data-open-panel="profile">✏️ Edit Profil</button><div class="language-setting"><label for="language-toggle">Bahasa</label><button type="button" id="language-toggle" class="language-toggle" aria-label="Ganti bahasa">EN</button></div><h2>Theme</h2><button class="setting-action" data-theme="senja">🌅 Senja</button><button class="setting-action" data-theme="natural">🌿 Natural</button><button class="setting-action" data-theme="dark">🌙 Dark</button><button class="setting-action admin-only" data-open-panel="admin" hidden>🛠 Administrator</button><button class="setting-action" id="export-chat-button" type="button">Ekspor Chat</button><p id="export-chat-status" class="export-chat-status" role="status" aria-live="polite"></p><button class="setting-action" data-open-panel="about">About</button><button class="setting-action" data-logout>Log out</button></div>
       </nav>
       <style id="main-menu-style">
+        .panel-friends .app-header,.app-header{display:flex!important;align-items:center!important;justify-content:flex-start!important}
+        .app-header #main-menu-btn{display:flex!important;align-items:center!important;justify-content:center!important;width:40px!important;height:40px!important;min-height:40px!important;padding:0!important;margin:0!important;line-height:0!important;font-size:0!important;align-self:center!important;flex:0 0 40px}
+        .app-header #main-menu-btn .hamburger-icon{margin:0 auto}
+        .app-header .app-identity{flex:1 1 auto!important;min-width:0;display:flex!important;flex-direction:column!important;align-items:flex-end!important;justify-content:center;text-align:right!important;margin:0 10px!important}
+        .app-header .app-identity strong,.app-header .app-identity small{display:block;width:100%;text-align:right!important}
+        .app-header .app-logo{flex:0 0 40px;width:40px!important;height:40px!important;margin:0!important}
         .hamburger-icon{display:inline-flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;width:22px;height:16px}
         .hamburger-icon span{display:block;width:22px;height:2px;border-radius:2px;background:currentColor}
         .main-menu-backdrop{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1200}
