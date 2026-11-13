@@ -15,32 +15,26 @@
       updateUserLabel();
       void load(query.value.trim());
     });
+    const p2pStatusLabel = (detail) => {
+      const status = typeof detail === "string" ? detail : detail?.status;
+      const labels = {
+        online: "P2P siap",
+        connecting: "Menghubungkan ke server P2P...",
+        conflict: "ID akun sedang dipakai di sesi lain. Tutup sesi lain lalu coba lagi.",
+        unavailable: "Layanan P2P tidak tersedia di browser ini.",
+        timeout: "Server P2P tidak merespons. Periksa koneksi internet.",
+        offline: "Koneksi P2P terputus, mencoba menyambung kembali...",
+      };
+      return labels[status] || "Menyiapkan koneksi P2P...";
+    };
     window.addEventListener("callme:peer-server-status", (event) => {
       const status = document.getElementById("p2p-status");
       if (!status) return;
-      const labels = {
-        online: "P2P ready",
-        connecting: "Menghubungi server...",
-        conflict: "ID akun sedang dipakai di sesi lain",
-        unavailable: "PeerJS tidak tersedia",
-        timeout: "Server P2P tidak merespons",
-        offline: "Koneksi P2P terputus, mencoba lagi...",
-      };
-      status.textContent = labels[event.detail?.status] || "Mencari...";
+      status.textContent = p2pStatusLabel(event.detail);
+      status.title = event.detail?.status ? `Status P2P: ${event.detail.status}` : "";
     });
-    const currentPeerStatus = window.CallMeP2P?.getStatus?.();
     const initialStatus = document.getElementById("p2p-status");
-    if (initialStatus) {
-      const labels = {
-        online: "P2P ready",
-        connecting: "Menghubungi server...",
-        conflict: "ID akun sedang dipakai di sesi lain",
-        unavailable: "PeerJS tidak tersedia",
-        timeout: "Server P2P tidak merespons",
-        offline: "Koneksi P2P terputus, mencoba lagi...",
-      };
-      initialStatus.textContent = labels[currentPeerStatus] || "Mencari...";
-    }
+    if (initialStatus) initialStatus.textContent = p2pStatusLabel(window.CallMeP2P?.getStatus?.());
     window.addEventListener("callme:profile-updated", () =>
       load(query.value.trim()),
     );
