@@ -83,6 +83,15 @@
       }
       window.CallMeP2P?.send?.({ kind: "call-log", id, status, roomId: roomIdForPeer(peerId) }, peerId);
     };
+    const mediaErrorMessage = (error, fallback = "Media gagal diakses") => {
+      const name = String(error?.name || "");
+      if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") return "Izin mikrofon/kamera ditolak. Izinkan akses lalu coba lagi.";
+      if (name === "NotFoundError" || name === "DevicesNotFoundError") return "Mikrofon/kamera tidak ditemukan di perangkat ini.";
+      if (name === "NotReadableError" || name === "TrackStartError") return "Mikrofon/kamera sedang dipakai aplikasi lain.";
+      if (name === "OverconstrainedError" || name === "ConstraintNotSatisfiedError") return "Perangkat media tidak mendukung pengaturan yang diminta.";
+      if (name === "AbortError") return "Akses media dibatalkan.";
+      return fallback + (name ? ` (${name})` : "");
+    };
     const captureLocalStream = async (mode, status) => {
       try {
         return await navigator.mediaDevices.getUserMedia({
@@ -94,7 +103,7 @@
         const audioOnly = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
-        status.textContent = "Menghubungkan video lawan...";
+        status.textContent = "Kamera tidak tersedia, melanjutkan dengan suara...";
         return audioOnly;
       }
     };
@@ -260,7 +269,7 @@
           callLogId: session.logId,
         });
         if (!attempt) {
-          status.textContent = "Panggilan gagal dimulai";
+          status.textContent = "Panggilan gagal dimulai. Pastikan koneksi P2P siap lalu coba lagi.";
           return;
         }
         currentCall = attempt;
@@ -275,7 +284,7 @@
         });
         attempt.on("error", () => {
           if (callSession !== session || currentCall !== attempt) return;
-          status.textContent = "Panggilan gagal";
+          status.textContent = "Panggilan gagal. Periksa koneksi lalu coba lagi.";
           finish(false);
         });
         attempt.on("iceStateChanged", (state) => {
@@ -290,7 +299,7 @@
               if (callSession === session && currentCall === attempt) finish(false);
             }, 2000);
           } else if (state === "failed") {
-            status.textContent = "Koneksi terputus";
+            status.textContent = "Koneksi panggilan terputus.";
             finish(false);
           }
         });
@@ -298,12 +307,12 @@
         // menerima panggilan. Jangan biarkan UI/sesi lama terlihat hidup.
         session.connectTimer = setTimeout(() => {
           if (callSession === session && currentCall === attempt && !remoteReceived) {
-            status.textContent = "Tidak ada jawaban";
+            status.textContent = "Tidak ada jawaban dari penerima.";
             finish(false);
           }
         }, 8000);
       } catch (error) {
-        status.textContent = "Media gagal: " + (error?.name || "error");
+        status.textContent = mediaErrorMessage(error, "Gagal memulai panggilan");
       }
     };
     async function open(mode) {
@@ -460,7 +469,7 @@
             }
           });
         } catch (error) {
-          status.textContent = "Panggilan gagal: " + (error?.name || "error");
+          status.textContent = mediaErrorMessage(error, "Gagal menerima panggilan");
           try { incoming.close(); } catch {}
         }
       }),
