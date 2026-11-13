@@ -528,8 +528,27 @@
           try { if (next.open) next.send(ack); } catch {}
         };
         if (data.kind === "text" || data.kind === "call-log") {
-          const row = { ...data, senderPeerId: next.peer, mine: false, createdAt: data.createdAt || Date.now() };
-          const save = window.CallMeStorage?.put?.("messages", row);
+          const persist = async () => {
+            let row = { ...data, senderPeerId: next.peer, mine: false, createdAt: data.createdAt || Date.now() };
+            if (data.kind === "call-log") {
+              try {
+                const existing = await window.CallMeStorage?.get?.("messages", data.id);
+                if (existing) {
+                  row = {
+                    ...existing,
+                    ...data,
+                    senderPeerId: next.peer,
+                    mine: existing.mine,
+                    direction: existing.direction || data.direction,
+                    callType: existing.callType || data.callType,
+                    createdAt: existing.createdAt || data.createdAt || Date.now(),
+                  };
+                }
+              } catch {}
+            }
+            return window.CallMeStorage?.put?.("messages", row);
+          };
+          const save = persist();
           if (save && typeof save.then === "function")
             save.then(sendAck, (error) => console.warn("Pesan diterima, tetapi gagal disimpan", error));
           else if (save !== undefined) sendAck();
