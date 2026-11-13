@@ -38,6 +38,7 @@
     });
 
     panel.querySelector("[data-logout]")?.addEventListener("click", () => {
+      try { window.CallMeWebPush?.unregister(); } catch (_) {}
       window.CallMeP2P?.stop();
       sessionStorage.removeItem("callme-v2-session-user");
       sessionStorage.removeItem("callme-v2-session-token");

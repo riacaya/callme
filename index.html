@@ -468,6 +468,7 @@ audio.chat-media { width: min(100%, 360px); }
               var isLogout = item.hasAttribute('data-logout');
               close();
               if(isLogout){
+                try{ window.CallMeWebPush?.unregister?.(); }catch(_){ }
                 try{ window.CallMeP2P?.stop?.(); }catch(_){ }
                 try{ sessionStorage.removeItem('callme-v2-session-user'); sessionStorage.removeItem('callme-v2-session-token'); localStorage.removeItem('callme-v2-persistent-session'); }catch(_){ }
                 try{ window.CallMeApp?.show?.('login'); }catch(_){ }
@@ -493,7 +494,10 @@ audio.chat-media { width: min(100%, 360px); }
 </script>
   <script src="scripts/core/identity.js"></script><script src="scripts/core/profile-repository.js"></script><script src="scripts/core/install.js"></script>
   <script src="scripts/core/shell-bridge.js"></script>
-  <script src="scripts/core/app.js"></script><script src="scripts/core/push.js"></script>
+  <script src="push-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+  <script src="scripts/core/app.js"></script><script src="scripts/core/push.js"></script><script src="scripts/core/web-push.js"></script>
   <script src="scripts/storage/indexeddb.js?v=20261013-1712"></script>
   
   

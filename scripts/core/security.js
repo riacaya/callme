@@ -39,6 +39,7 @@
     // mereka tetap bekerja dari cache tanpa harus keluar.
     if (!user || token === "local-device-session") return;
     sessionExpired = true;
+    try { window.CallMeWebPush?.unregister(); } catch (_) {}
     window.CallMeP2P?.stop();
     sessionStorage.removeItem("callme-v2-session-user");
     sessionStorage.removeItem("callme-v2-session-token");
