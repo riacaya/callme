@@ -317,7 +317,8 @@
       const item = document.createElement("div");
       item.dataset.messageId = row.id;
       item.dataset.createdAt = String(row.createdAt || Date.now());
-      item.className = `chat-item ${row.mine ? "chat-item-mine" : ""}`;
+      const isOutgoing = row.direction ? row.direction === "outgoing" : !!row.mine;
+      item.className = `chat-item ${isOutgoing ? "chat-item-mine" : ""}`;
       if (row.kind === "call-log") {
         item.classList.add("chat-item-media", "call-log-item");
         item.style.width = "60%";
@@ -347,7 +348,8 @@
         const label = document.createElement("span");
         label.style.cssText = "display:flex;flex-direction:column;line-height:1.25;min-width:0";
         const direction = document.createElement("strong");
-        direction.textContent = row.mine ? "Keluar" : "Masuk";
+        const isOutgoingLog = row.direction ? row.direction === "outgoing" : !!row.mine;
+        direction.textContent = isOutgoingLog ? "Keluar" : "Masuk";
         direction.style.fontSize = "13px";
         const status = document.createElement("small");
         status.textContent = statusText.trim() || "Memanggil";

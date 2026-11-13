@@ -124,13 +124,17 @@ audio.chat-media { width: min(100%, 360px); }
 <link rel="apple-touch-icon" href="assets/logo-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
+.panel-chatroom .chat-item,
 .panel-chatroom .chat-item:not(.chat-item-media),
+.panel-chatroom .chat-item-media,
 .panel-chatroom .chat-item-media:has(>a.chat-media),
 .panel-chatroom .chat-item-media:has(>audio.chat-media),
 .panel-chatroom .chat-item-media:has(>img.chat-media),
-.panel-chatroom .chat-item-media:has(>video.chat-media){width:60%;max-width:60%}
+.panel-chatroom .chat-item-media:has(>video.chat-media){width:72%;max-width:72%;min-width:0}
+.panel-chatroom .chat-item-media{width:72%!important;max-width:72%!important}
 .panel-chatroom .chat-item-media:has(>img.chat-media),
 .panel-chatroom .chat-item-media:has(>video.chat-media){background:var(--head);color:#fff;border-radius:14px}
+.panel-chatroom .chat-item-media.media-expanded{width:var(--panel-width)!important;max-width:var(--panel-width)!important}
 </style>
 <style>
 .panel-chatroom .chat-item-media:has(>audio.chat-media) .chat-meta{position:static;display:block;margin:6px 2px 0;text-align:right;color:#fff}
