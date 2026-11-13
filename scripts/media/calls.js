@@ -248,29 +248,32 @@
     };
     // P2P media dimulai setelah status penerima aktif atau setelah Jawab FCM.
     const startOutgoingP2P = async (mode, target, session = callSession) => {
-      if (callEnded || callSession !== session || session?.kind !== "outgoing" || session.peerId !== target) return;
+      if (callEnded || callSession !== session || session?.kind !== "outgoing" || session.peerId !== target) return false;
       const view = panel(mode),
         local = mode === "video" ? view?.querySelector("#video-local") : view?.querySelector("audio"),
         remote = mode === "video" ? view?.querySelector("#video-remote") : local,
         status = view?.querySelector('[id$="-call-status"]');
-      if (!view || !local || !status) return;
+      if (!view || !local || !status) return false;
       try {
-        const localStream = await captureLocalStream(mode, status);
-        if (callEnded || callSession !== session) {
-          localStream.getTracks().forEach((track) => track.stop());
-          return;
+        let localStream = stream;
+        if (!localStream || !localStream.getTracks?.().some((t) => t.readyState === "live")) {
+          localStream = await captureLocalStream(mode, status);
+          if (callEnded || callSession !== session) {
+            localStream.getTracks().forEach((track) => track.stop());
+            return false;
+          }
+          stream = localStream;
+          setMediaSource(local, localStream);
+          local.muted = true;
         }
-        stream = localStream;
-        setMediaSource(local, localStream);
-        local.muted = true;
         status.textContent = "Menghubungkan...";
-        const attempt = window.CallMeP2P?.call(target, stream, {
+        const attempt = window.CallMeP2P?.call(target, localStream, {
           video: mode === "video",
           callLogId: session.logId,
         });
         if (!attempt) {
           status.textContent = "Panggilan gagal dimulai. Pastikan koneksi P2P siap lalu coba lagi.";
-          return;
+          return false;
         }
         currentCall = attempt;
         attempt.on("stream", (incoming) => {
@@ -311,8 +314,10 @@
             finish(false);
           }
         }, 8000);
+        return true;
       } catch (error) {
         status.textContent = mediaErrorMessage(error, "Gagal memulai panggilan");
+        return false;
       }
     };
     async function open(mode) {
@@ -395,6 +400,7 @@
           if (callSession) callSession.rejected = true;
           if (target) {
             try { window.CallMeP2P?.sendCallControl?.({ kind: "call-declined", callLogId: callSession?.logId || "" }, target); } catch (_) {}
+            try { window.CallMeAndroid?.declinedCall?.(target, callSession?.logId || ""); } catch (_) {}
           }
         }
         window.CallMeAndroid?.cancelCall?.();
@@ -508,7 +514,18 @@
       callSession.acceptResponseHandled = true;
       callSession.waitingForAnswer = false;
       if (callSession.logId) void updateCallLog(callSession.logId, peerId, "accepted");
-      void startOutgoingP2P(callSession.mode, callSession.peerId, callSession);
+      void (async () => {
+        const session = callSession;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          if (callSession !== session || callEnded || session.kind !== "outgoing") return;
+          if (currentCall || remoteReceived) return;
+          await startOutgoingP2P(session.mode, session.peerId, session);
+          if (callSession !== session || callEnded || currentCall || remoteReceived) return;
+          const statusEl = panel(session.mode)?.querySelector('[id$="-call-status"]');
+          if (statusEl) statusEl.textContent = "Penerima siap, mencoba menghubungkan...";
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      })();
     });
     window.addEventListener("callme:fcm-call-declined", (event) => {
       const peerId = event.detail?.peerId || "";

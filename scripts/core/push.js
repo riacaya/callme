@@ -78,6 +78,14 @@
         { sender: user, id: callId || "" },
       );
     },
+    answerCall: function (to, video, callId) {
+      var user = me();
+      notify(to, "call-accepted", user || "CallMe", "Jawaban diterima", { sender: user, id: callId || "" });
+    },
+    declineCall: function (to, callId) {
+      var user = me();
+      notify(to, "call-declined", user || "CallMe", "Panggilan ditolak", { sender: user, id: callId || "" });
+    },
   });
 })();
 
