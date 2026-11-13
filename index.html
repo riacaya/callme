@@ -374,8 +374,8 @@ audio.chat-media { width: min(100%, 360px); }
 .panel-admin .admin-user-name small{color:var(--muted);font-size:11px}
 .panel-admin .admin-user-role{flex:none;color:var(--muted);font-size:11px}
 @media (min-width:900px){.panel-admin{position:absolute;inset:0;z-index:12}}
-.export-chat-status{min-height:0;margin:0 0 6px;padding:0 10px;color:var(--ink);font-size:12px;line-height:1.35;text-align:center}.export-chat-status:empty{display:none}#export-chat-button:disabled{opacity:.6;cursor:wait}
 </style>
+<style>.export-chat-status{min-height:0;margin:0 0 6px;padding:0 10px;color:var(--ink);font-size:12px;line-height:1.35;text-align:center}.export-chat-status:empty{display:none}#export-chat-button:disabled{opacity:.6;cursor:wait}</style>
 </head>
 <body>
   <main id="app" class="app-shell">
@@ -431,7 +431,7 @@ audio.chat-media { width: min(100%, 360px); }
         .app-header .app-identity{flex:1 1 auto!important;min-width:0;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center;text-align:left!important;margin:0 10px!important}
         .app-header .app-identity strong,.app-header .app-identity small{display:block;width:100%;text-align:left!important}
         .app-header .app-logo{flex:0 0 40px;width:40px!important;height:40px!important;margin:0!important}
-        .hamburger-icon{display:inline-flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;width:22px;height:20px}
+        .hamburger-icon{display:inline-flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;width:22px;height:16px}
         .hamburger-icon span{display:block;width:22px;height:2px;border-radius:2px;background:currentColor}
         .main-menu-backdrop{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1200}
         .main-menu-backdrop.open{display:block}
@@ -492,8 +492,7 @@ audio.chat-media { width: min(100%, 360px); }
 //# sourceMappingURL=peerjs.min.js.map
 </script>
   <script src="scripts/core/identity.js"></script><script src="scripts/core/profile-repository.js"></script><script src="scripts/core/install.js"></script>
-  <script src="push-config.js?v=20261012-1540"></script>
-  <script src="scripts/core/app.js?v=20261012-1540"></script><script src="scripts/core/push.js?v=20261013-1623"></script>
+  <script src="scripts/core/app.js"></script><script src="scripts/core/push.js"></script>
   <script src="scripts/storage/indexeddb.js?v=20261013-1712"></script>
   
   
@@ -512,7 +511,7 @@ audio.chat-media { width: min(100%, 360px); }
   
   
   <script src="scripts/features/settings.js"></script>
-  <script src="scripts/features/chat-export.js?v=20261014-01"></script>
+  <script src="scripts/features/chat-export.js"></script>
   <script src="scripts/i18n/locale-id.js"></script><script src="scripts/i18n/locale-en.js"></script>
   <script src="scripts/i18n/translator.js"></script>
   <script src="scripts/features/profile.js"></script>

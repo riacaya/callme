@@ -16,8 +16,10 @@
     panels.set(name, element);
   }
 
+  let lastMainPanel = "friends";
   function show(name) {
     if (!panels.has(name)) name = panels.has("friends") ? "friends" : [...panels.keys()][0];
+    if (name === "friends" || name === "chatroom") lastMainPanel = name;
     panels.forEach((panel, key) => {
       panel.classList.toggle("hidden", key !== name);
     });
@@ -137,7 +139,13 @@
       const back = event.target.closest("[data-back]");
       if (back) {
         event.preventDefault();
-        show(back.dataset.back);
+        const fromPanel = back.closest("[data-panel]")?.dataset.panel;
+        const target = back.dataset.back;
+        if (target === "friends" && ["profile", "admin", "about", "location"].includes(fromPanel || "")) {
+          show(lastMainPanel || "friends");
+        } else {
+          show(target);
+        }
         return;
       }
       const open = event.target.closest("[data-open-panel]");

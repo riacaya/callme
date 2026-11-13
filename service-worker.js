@@ -1,10 +1,61 @@
-/* Handle data-only FCM push events directly; no SDK import is needed here. */
-self.addEventListener("install", function (event) {
-  event.waitUntil(self.skipWaiting());
+/* CallMe service worker: push notifications + versioned app-shell caching. */
+const CACHE_VERSION = "callme-v4-2026-11-13";
+const APP_CACHE = `app-${CACHE_VERSION}`;
+const PRECACHE_URLS = [
+  "./",
+  "./index.html",
+  "./manifest.webmanifest",
+  "./assets/logo-192.png",
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(APP_CACHE);
+    await Promise.allSettled(PRECACHE_URLS.map((url) => cache.add(url)));
+    await self.skipWaiting();
+  })());
 });
 
-self.addEventListener("activate", function (event) {
-  event.waitUntil(self.clients.claim());
+self.addEventListener("activate", (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k.startsWith("app-") && k !== APP_CACHE).map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  const isNav = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
+  if (isNav) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(req);
+        const cache = await caches.open(APP_CACHE);
+        cache.put("./index.html", fresh.clone()).catch(() => {});
+        return fresh;
+      } catch (_) {
+        const cached = await caches.match(req, { ignoreSearch: true }) || await caches.match("./index.html");
+        if (cached) return cached;
+        throw _;
+      }
+    })());
+    return;
+  }
+  event.respondWith((async () => {
+    const cached = await caches.match(req);
+    const fetchPromise = fetch(req).then((res) => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(APP_CACHE).then((c) => c.put(req, copy)).catch(() => {});
+      }
+      return res;
+    }).catch(() => null);
+    return cached || (await fetchPromise) || Response.error();
+  })());
 });
 
 self.addEventListener("push", function (event) {
