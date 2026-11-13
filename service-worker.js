@@ -1,5 +1,5 @@
 /* CallMe service worker: push notifications + versioned app-shell caching. */
-const CACHE_VERSION = "callme-v4-2026-11-13";
+const CACHE_VERSION = "callme-v5-2026-11-13";
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   "./",
@@ -39,6 +39,20 @@ self.addEventListener("fetch", (event) => {
         return fresh;
       } catch (_) {
         const cached = await caches.match(req, { ignoreSearch: true }) || await caches.match("./index.html");
+        if (cached) return cached;
+        throw _;
+      }
+    })());
+    return;
+  }
+  // File unduhan (APK/zip/setup) harus selalu terbaru - jangan cache-first.
+  const isDownload = /\/download\//i.test(url.pathname) || /\.(apk|zip|exe)$/i.test(url.pathname);
+  if (isDownload) {
+    event.respondWith((async () => {
+      try {
+        return await fetch(req);
+      } catch (_) {
+        const cached = await caches.match(req);
         if (cached) return cached;
         throw _;
       }
