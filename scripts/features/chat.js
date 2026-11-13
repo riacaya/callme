@@ -989,6 +989,7 @@
           row.deliveryStatus = "sending";
           await window.CallMeStorage?.put?.("messages", row);
           if (!p2pReady) {
+            setConnectionStatus("Pesan disimpan, menunggu koneksi P2P/penerima...");
           // Pemberitahuan ber-ID membangunkan penerima; isi tetap antre
           // di pengirim dan dikirim lewat P2P saat koneksi kembali siap.
             window.CallMePush?.notify?.(
@@ -998,6 +999,7 @@
               { id: row.id, roomId: row.roomId, createdAt: row.createdAt, pendingOnly: true, sender: sessionStorage.getItem("callme-v2-session-user") || "" },
             );
           } else {
+            setConnectionStatus("Pesan menunggu konfirmasi penerima, mencoba mengirim ulang...");
             await flushPendingMessages(activeFriend.peerId);
           }
         }
