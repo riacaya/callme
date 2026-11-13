@@ -440,9 +440,11 @@ audio.chat-media { width: min(100%, 360px); }
         .main-menu-backdrop.open{display:block}
         .main-menu{position:absolute;top:0;left:0;bottom:0;width:min(300px,82%)!important;max-width:100%;height:auto!important;background:var(--panel);color:var(--ink);z-index:1201;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);box-shadow:2px 0 16px rgba(0,0,0,.18);overflow:hidden}
         .main-menu.open{transform:translateX(0)}
-        .main-menu-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--head);color:#fff;flex-shrink:0}
-        .main-menu-title{font-size:16px;font-weight:700}
-        .main-menu-close{width:32px;height:32px;border:0;border-radius:8px;background:rgba(255,255,255,.15);color:#fff;font-size:16px;line-height:1}
+        .main-menu-header{display:flex;align-items:center;justify-content:space-between;padding:14px 12px;background:var(--head);color:#fff;flex-shrink:0;gap:8px}
+        .main-menu-title{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:700;text-align:center}
+        .main-menu-title-icon{font-size:18px;line-height:1}
+        .main-menu-close,.main-menu-back{width:32px;height:32px;border:0;border-radius:8px;background:rgba(255,255,255,.15);color:#fff;font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex:0 0 32px}
+        .main-menu-header-spacer{width:32px;height:32px;flex:0 0 32px}
         .main-menu-body{flex:1;overflow:auto;padding:8px 0}
         .main-menu-item{display:flex;align-items:center;width:100%;padding:14px 18px;border:0;border-bottom:1px solid color-mix(in srgb,var(--ink) 10%,transparent);background:transparent;color:var(--ink);font-size:15px;text-align:left}
         .main-menu-item:active,.main-menu-item:hover{background:var(--soft)}
