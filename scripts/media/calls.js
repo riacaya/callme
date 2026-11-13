@@ -485,6 +485,29 @@
         }
       }),
     );
+    const handleCallAccepted = (peerId, callId) => {
+      if (callSession?.kind !== "outgoing" || !callSession.waitingForAnswer) return;
+      if (String(peerId || "").replace(/^cm-/i, "").toLowerCase() !==
+          String(callSession.peerId || "").replace(/^cm-/i, "").toLowerCase()) return;
+      if (callId && callSession.logId && callId !== callSession.logId) return;
+      if (callSession.acceptResponseHandled) return;
+      callSession.acceptResponseHandled = true;
+      callSession.waitingForAnswer = false;
+      if (callSession.answerTimer) clearTimeout(callSession.answerTimer);
+      if (callSession.logId) void updateCallLog(callSession.logId, callSession.peerId, "accepted");
+      void (async () => {
+        const session = callSession;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          if (callSession !== session || callEnded || session.kind !== "outgoing") return;
+          if (currentCall || remoteReceived) return;
+          await startOutgoingP2P(session.mode, session.peerId, session);
+          if (callSession !== session || callEnded || currentCall || remoteReceived) return;
+          const statusEl = panel(session.mode)?.querySelector('[id$="-call-status"]');
+          if (statusEl) statusEl.textContent = "Penerima siap, mencoba menghubungkan...";
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      })();
+    };
     window.addEventListener("callme:p2p-message", (event) => {
       const detail = event.detail || {};
       if (detail.kind === "call-hangup") {
@@ -503,29 +526,13 @@
         finish(false);
         return;
       }
+      if (detail.kind === "call-accepted") {
+        handleCallAccepted(detail.senderPeerId || detail.peerId || detail.sender || "", detail.callLogId || detail.id || detail.callId || "");
+        return;
+      }
     });
     window.addEventListener("callme:fcm-call-accepted", (event) => {
-      const peerId = event.detail?.peerId || "";
-      if (callSession?.kind !== "outgoing" || !callSession.waitingForAnswer ||
-          String(peerId).replace(/^cm-/i, "").toLowerCase() !==
-          String(callSession.peerId).replace(/^cm-/i, "").toLowerCase()) return;
-      if (event.detail?.callId && callSession.logId && event.detail.callId !== callSession.logId) return;
-      if (callSession.acceptResponseHandled) return;
-      callSession.acceptResponseHandled = true;
-      callSession.waitingForAnswer = false;
-      if (callSession.logId) void updateCallLog(callSession.logId, peerId, "accepted");
-      void (async () => {
-        const session = callSession;
-        for (let attempt = 0; attempt < 6; attempt++) {
-          if (callSession !== session || callEnded || session.kind !== "outgoing") return;
-          if (currentCall || remoteReceived) return;
-          await startOutgoingP2P(session.mode, session.peerId, session);
-          if (callSession !== session || callEnded || currentCall || remoteReceived) return;
-          const statusEl = panel(session.mode)?.querySelector('[id$="-call-status"]');
-          if (statusEl) statusEl.textContent = "Penerima siap, mencoba menghubungkan...";
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-      })();
+      handleCallAccepted(event.detail?.peerId || "", event.detail?.callId || "");
     });
     window.addEventListener("callme:fcm-call-declined", (event) => {
       const peerId = event.detail?.peerId || "";
