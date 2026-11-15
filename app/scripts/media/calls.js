@@ -1,0 +1,752 @@
+(function () {
+  document.addEventListener("DOMContentLoaded", () => {
+    let stream = null,
+      currentCall = null,
+      pendingIncoming = null,
+      callEnded = true,
+      callSession = null,
+      // Sisi penerima sudah mengirim stream (maka putar ulang harus berhenti).
+      remoteReceived = false;
+    const panel = (mode) =>
+      document.querySelector(`[data-panel="${mode}-call"]`);
+    const setChatCallButtonsHidden = (hidden) => {
+      document.querySelectorAll('[data-panel="chatroom"] [data-call]')
+        .forEach((button) => { button.hidden = hidden; });
+    };
+    const setMediaSource = (element, mediaStream) => {
+      element.srcObject = mediaStream;
+      element.autoplay = true;
+      element.playsInline = true;
+      element.play?.().catch(() => {});
+    };
+    const clearCallMedia = () => {
+      document.querySelectorAll('[data-panel="voice-call"] audio, [data-panel="video-call"] video')
+        .forEach((element) => {
+          const attached = element.srcObject;
+          if (attached && typeof attached.getTracks === "function")
+            attached.getTracks().forEach((track) => track.stop());
+          element.pause?.();
+          element.srcObject = null;
+        });
+    };
+    const roomIdForPeer = (peerId) => {
+      const localId = sessionStorage.getItem("callme-v2-session-user") ||
+        localStorage.getItem("callme-v2-user") || "";
+      try { return window.CallMeIdentity.roomId(localId, peerId); } catch { return ""; }
+    };
+    const createCallLog = async (peerId, callType, direction) => {
+      const roomId = roomIdForPeer(peerId);
+      if (!roomId) return null;
+      if (direction === "outgoing" && callEnded) return null;
+      const row = { id: window.CallMeApp.uid(), kind: "call-log", callType, direction, status: "started", roomId, mine: true, createdAt: Date.now() };
+      await window.CallMeStorage?.put?.("messages", row);
+      window.dispatchEvent(new CustomEvent("callme:call-log", { detail: row }));
+      return row;
+    };
+    const saveIncomingCallLog = async (peerId, callType, logId, status = "started") => {
+      const roomId = roomIdForPeer(peerId);
+      if (!roomId) return null;
+      const identity = window.CallMeIdentity?.withoutPeerPrefix?.(peerId) || String(peerId || "").replace(/^cm-/i, "").toLowerCase();
+      const contacts = (await window.CallMeStorage?.all?.("contacts")) || [];
+      if (!contacts.some((contact) => (window.CallMeIdentity?.withoutPeerPrefix?.(contact.peerId) || String(contact.peerId || "").replace(/^cm-/i, "").toLowerCase()) === identity)) {
+        await window.CallMeStorage?.put?.("contacts", { peerId: identity, phone: identity, display_name: identity, profile_photo: "", email: "", savedAt: Date.now() });
+        await window.CallMeStorage?.remove?.("settings", `deleted-contact:${identity}`);
+        window.dispatchEvent(new CustomEvent("callme:contacts-updated"));
+      }
+      const row = { id: logId || window.CallMeApp.uid(), kind: "call-log", callType, direction: "incoming", status, roomId, mine: false, createdAt: Date.now() };
+      await window.CallMeStorage?.put?.("messages", row);
+      window.dispatchEvent(new CustomEvent("callme:call-log", { detail: row }));
+      return row;
+    };
+    window.addEventListener("callme:fcm-call-declined-local", async (event) => {
+      const detail = event.detail || {};
+      if (!detail.peer) return;
+      window.__callmeDeclinedCall = null;
+      const mode = detail.video ? "video" : "voice";
+      await saveIncomingCallLog(detail.peer, mode, detail.callLogId || "", "rejected");
+      window.__callmeAutoAnswerPeer = "";
+    });
+    if (window.__callmeDeclinedCall) {
+      const detail = window.__callmeDeclinedCall;
+      window.__callmeDeclinedCall = null;
+      if (detail.peer)
+        void saveIncomingCallLog(detail.peer, detail.video ? "video" : "voice", detail.callLogId || "", "rejected");
+    }
+    const updateCallLog = async (id, peerId, status) => {
+      if (!id) return;
+      const rows = (await window.CallMeStorage?.all?.("messages")) || [];
+      const current = rows.find((row) => row.id === id);
+      if (current) {
+        const updated = { ...current, status };
+        await window.CallMeStorage?.put?.("messages", updated);
+        window.dispatchEvent(new CustomEvent("callme:call-log", { detail: updated }));
+      }
+      window.CallMeP2P?.send?.({ kind: "call-log", id, status, roomId: roomIdForPeer(peerId) }, peerId);
+    };
+    const mediaErrorMessage = (error, fallback = "Media gagal diakses") => {
+      const name = String(error?.name || "");
+      if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") return "Izin mikrofon/kamera ditolak. Izinkan akses lalu coba lagi.";
+      if (name === "NotFoundError" || name === "DevicesNotFoundError") return "Mikrofon/kamera tidak ditemukan di perangkat ini.";
+      if (name === "NotReadableError" || name === "TrackStartError") return "Mikrofon/kamera sedang dipakai aplikasi lain.";
+      if (name === "OverconstrainedError" || name === "ConstraintNotSatisfiedError") return "Perangkat media tidak mendukung pengaturan yang diminta.";
+      if (name === "AbortError") return "Akses media dibatalkan.";
+      return fallback + (name ? ` (${name})` : "");
+    };
+    const captureLocalStream = async (mode, status) => {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: mode === "video",
+        });
+      } catch (error) {
+        if (mode !== "video") throw error;
+        const audioOnly = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        status.textContent = "Kamera tidak tersedia, melanjutkan dengan suara...";
+        return audioOnly;
+      }
+    };
+    const bindRemoteStream = (element, mediaStream, status) => {
+      setMediaSource(element, mediaStream);
+      element.closest(".video-call-stage")?.querySelector("#video-call-name")?.toggleAttribute("hidden", true);
+      element.closest(".video-call-stage")?.querySelector(".video-call-avatar")?.setAttribute("hidden", "");
+      element.muted = false;
+      status.textContent = "Tersambung";
+    };
+    const setCallNameVisible = (view, visible) => {
+      view?.querySelector('[id$="-call-name"]')?.toggleAttribute("hidden", !visible);
+    };
+    const findContactForPeer = async (peerId) => {
+      const identity = window.CallMeIdentity?.withoutPeerPrefix?.(peerId) ||
+        String(peerId || "").replace(/^cm-/i, "").toLowerCase();
+      const contacts = (await window.CallMeStorage?.all?.("contacts")) || [];
+      return contacts.find((row) => {
+        const rowId = window.CallMeIdentity?.withoutPeerPrefix?.(row.peerId) ||
+          String(row.peerId || "").replace(/^cm-/i, "").toLowerCase();
+        return rowId === identity;
+      });
+    };
+    const refreshContactProfile = async (peerId) => {
+      const identity = window.CallMeIdentity?.withoutPeerPrefix?.(peerId) ||
+        String(peerId || "").replace(/^cm-/i, "").toLowerCase();
+      const cached = await findContactForPeer(identity);
+      const refresh = async () => {
+        try {
+          const row = await window.CallMeProfileRepository?.syncContact?.(
+            identity,
+            sessionStorage.getItem("callme-v2-session-user") || identity,
+            sessionStorage.getItem("callme-v2-session-token") || "",
+          );
+          if (row) window.dispatchEvent(new CustomEvent("callme:profile-updated", { detail: { peerId: identity, data: row } }));
+          return row;
+        } catch (error) {
+          console.warn("Profil panggilan gagal disinkronkan", identity, error);
+          return cached;
+        }
+      };
+      // Cache lokal dipakai langsung. Server hanya menyegarkan background.
+      if (cached) {
+        void refresh();
+        return cached;
+      }
+      return refresh();
+    };
+    const displayNameForPeer = async (peerId) => {
+      const contact = await refreshContactProfile(peerId);
+      return contact?.display_name || contact?.name ||
+        window.CallMeIdentity?.withoutPeerPrefix?.(peerId) ||
+        String(peerId || "").replace(/^cm-/i, "").toLowerCase() ||
+        "Panggilan masuk";
+    };
+    const setVoiceAvatar = async (peerId) => {
+      const avatar = document.getElementById("voice-avatar");
+      if (!avatar) return;
+      const contact = await refreshContactProfile(peerId);
+      const image = document.createElement("img");
+      image.src = contact?.profile_photo || window.CallMeChatUtils?.defaultAvatar || "";
+      image.alt = contact?.display_name || contact?.phone || String(peerId || "");
+      image.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:50%";
+      avatar.replaceChildren(image);
+    };
+    const setVideoAvatar = async (peerId, view) => {
+      if (!view) return;
+      const name = view.querySelector("#video-call-name");
+      if (name) name.style.cssText = "position:absolute;z-index:3;top:calc(50% + 78px);left:12px;right:12px;text-align:center;color:#fff;text-shadow:0 1px 3px #000;font-size:18px";
+      let avatar = view.querySelector(".video-call-avatar");
+      if (!avatar) {
+        avatar = document.createElement("div");
+        avatar.className = "video-call-avatar";
+        avatar.style.cssText = "position:absolute;z-index:2;top:50%;left:50%;transform:translate(-50%,-50%);width:132px;height:132px;border-radius:50%;overflow:hidden;background:#fff";
+        view.querySelector(".video-call-stage")?.append(avatar);
+      }
+      const contact = await refreshContactProfile(peerId);
+      const image = document.createElement("img");
+      image.src = contact?.profile_photo || window.CallMeChatUtils?.defaultAvatar || "";
+      image.alt = contact?.display_name || contact?.phone || String(peerId || "");
+      image.style.cssText = "width:100%;height:100%;object-fit:cover";
+      avatar.replaceChildren(image);
+      avatar.hidden = false;
+    };
+    const activateCallRoom = async (peerId) => {
+      if (!peerId) return false;
+      for (let attempt = 0; attempt < 20; attempt++) {
+        if (typeof window.CallMeChat?.open === "function") break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      if (typeof window.CallMeChat?.open !== "function") return false;
+      const contact = await refreshContactProfile(peerId);
+      const friend = contact || {
+        peerId: String(peerId || "").replace(/^cm-/i, ""),
+        display_name: "",
+      };
+      await window.CallMeChat?.open?.(friend);
+      return true;
+    };
+    const finish = (notify = true) => {
+      if (callEnded) return;
+      const session = callSession,
+        callWasProcessed =
+          session?.kind === "outgoing" ||
+          (session?.kind === "incoming" && session.accepted),
+        returnPanel = session?.returnPanel || "friends";
+      callEnded = true;
+      try { session?.__cleanupAttempt?.(); } catch {}
+      if (session?.answerTimer) clearTimeout(session.answerTimer);
+      if (session?.connectTimer) clearTimeout(session.connectTimer);
+      if (session?.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+      remoteReceived = false;
+      const
+        call = currentCall || pendingIncoming?.incoming,
+        target = call?.peer || window.CallMeChat?.activePeer?.();
+      if (!call && !currentCall && !pendingIncoming) {
+        setChatCallButtonsHidden(false);
+        callSession = null;
+        window.CallMeApp.show(returnPanel);
+        return;
+      }
+      if (notify && target)
+        window.CallMeP2P?.sendCallControl?.({ kind: "call-hangup" }, target);
+      if (session?.kind === "incoming" && !session.accepted && !session.rejected && session.logId && target)
+        updateCallLog(session.logId, target, "missed");
+      currentCall = null;
+      pendingIncoming = null;
+      callSession = null;
+      try {
+        call?.close();
+      } catch {}
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+      clearCallMedia();
+      setChatCallButtonsHidden(false);
+      const hasActiveRoom = Boolean(window.CallMeChat?.activePeer?.());
+      if (callWasProcessed && hasActiveRoom)
+        window.CallMeApp.show("chatroom");
+      else window.CallMeApp.show(returnPanel);
+    };
+    const setIncomingControls = (view, incoming) => {
+      view?.querySelector("[data-call-accept]")?.toggleAttribute("hidden", !incoming);
+    };
+    // P2P media dimulai setelah status penerima aktif atau setelah Jawab FCM.
+    const startOutgoingP2P = async (mode, target, session = callSession) => {
+      if (callEnded || callSession !== session || session?.kind !== "outgoing" || session.peerId !== target) return false;
+      const view = panel(mode),
+        local = mode === "video" ? view?.querySelector("#video-local") : view?.querySelector("audio"),
+        remote = mode === "video" ? view?.querySelector("#video-remote") : local,
+        status = view?.querySelector('[id$="-call-status"]');
+      if (!view || !local || !status) return false;
+      try {
+        let localStream = stream;
+        if (!localStream || !localStream.getTracks?.().some((t) => t.readyState === "live")) {
+          localStream = await captureLocalStream(mode, status);
+          if (callEnded || callSession !== session) {
+            localStream.getTracks().forEach((track) => track.stop());
+            return false;
+          }
+          stream = localStream;
+          setMediaSource(local, localStream);
+          local.muted = true;
+        }
+        status.textContent = "Menghubungkan...";
+        const attempt = window.CallMeP2P?.call(target, localStream, {
+          video: mode === "video",
+          callLogId: session.logId,
+        });
+        if (!attempt) {
+          status.textContent = "Panggilan gagal dimulai. Pastikan koneksi P2P siap lalu coba lagi.";
+          return false;
+        }
+        currentCall = attempt;
+        let attemptWatchdog = null;
+        const cleanupAttempt = () => {
+          window.removeEventListener("callme:p2p-error", onPeerErr);
+          if (attemptWatchdog) {
+            clearTimeout(attemptWatchdog);
+            attemptWatchdog = null;
+          }
+          if (session.__cleanupAttempt === cleanupAttempt) session.__cleanupAttempt = null;
+        };
+        const releaseForRetry = () => {
+          if (callSession !== session || currentCall !== attempt) return;
+          cleanupAttempt();
+          if (session.connectTimer) clearTimeout(session.connectTimer);
+          session.connectTimer = null;
+          currentCall = null;
+          try { attempt.close(); } catch {}
+          if (session.waitingForAnswer && !remoteReceived && !callEnded) {
+            status.textContent = "Menunggu jawaban...";
+          }
+        };
+        // EXPIRE dari PeerJS (peer tujuan belum terdaftar di server — mis. APK
+        // baru bangun dari tidur) dipancarkan sebagai error peer-level, bukan
+        // error/close MediaConnection. Tanpa ini, currentCall terkunci dan loop
+        // retry berhenti mencoba sehingga pemanggil menunggu sampai timeout.
+        const onPeerErr = (e) => {
+          const detail = e?.detail || {};
+          const err = detail.error || detail;
+          if (detail.scope !== "connection" || err?.type !== "peer-unavailable") return;
+          if (callSession !== session || currentCall !== attempt || remoteReceived || callEnded) return;
+          if (!session.waitingForAnswer) return;
+          const msg = String(err?.message || "");
+          if (msg && !msg.includes(String(target || ""))) return;
+          releaseForRetry();
+        };
+        window.addEventListener("callme:p2p-error", onPeerErr);
+        // Jaring pengaman: bila percobaan macet (EXPIRE/close tak terpicu, ICE
+        // tak maju) lepaskan agar loop retry bisa mengirim offer baru.
+        attemptWatchdog = setTimeout(() => {
+          if (callSession !== session || currentCall !== attempt || remoteReceived || callEnded) return;
+          if (!session.waitingForAnswer) return;
+          releaseForRetry();
+        }, 12000);
+        session.__cleanupAttempt = cleanupAttempt;
+        attempt.on("stream", (incoming) => {
+          if (callEnded || callSession !== session || currentCall !== attempt) return;
+          cleanupAttempt();
+          remoteReceived = true;
+          if (session.connectTimer) clearTimeout(session.connectTimer);
+          // Aliran remote sudah membuktikan panggilan terjawab — hentikan
+          // hitung mundur "menunggu jawaban" walau sinyal call-accepted hilang
+          // (penerima bangun dari tidur & token push pemanggil tidak ada).
+          if (session.waitingForAnswer) {
+            session.waitingForAnswer = false;
+            if (session.answerTimer) clearTimeout(session.answerTimer);
+            session.answerTimer = null;
+            if (session.logId) void updateCallLog(session.logId, session.peerId, "accepted");
+          }
+          bindRemoteStream(remote, incoming, status);
+        });
+        // Selama masih menunggu jawaban, close/error satu percobaan TIDAK
+        // mengakhiri sesi: bersihkan currentCall supaya loop retry memanggil
+        // ulang (penerima mungkin baru bangun / peer belum terdaftar di server).
+        attempt.on("close", () => {
+          if (callSession !== session || currentCall !== attempt) return;
+          cleanupAttempt();
+          if (session.waitingForAnswer && !remoteReceived) {
+            if (session.connectTimer) clearTimeout(session.connectTimer);
+            session.connectTimer = null;
+            currentCall = null;
+            status.textContent = "Menunggu jawaban...";
+            return;
+          }
+          finish(false);
+        });
+        attempt.on("error", () => {
+          if (callSession !== session || currentCall !== attempt) return;
+          cleanupAttempt();
+          if (session.waitingForAnswer && !remoteReceived) {
+            if (session.connectTimer) clearTimeout(session.connectTimer);
+            session.connectTimer = null;
+            currentCall = null;
+            try { attempt.close(); } catch {}
+            status.textContent = "Menunggu jawaban...";
+            return;
+          }
+          status.textContent = "Panggilan gagal. Periksa koneksi lalu coba lagi.";
+          finish(false);
+        });
+        attempt.on("iceStateChanged", (state) => {
+          if (callSession !== session || currentCall !== attempt) return;
+          if (state === "connected" || state === "completed") {
+            if (session.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+            session.iceDisconnectTimer = null;
+          } else if (state === "disconnected") {
+            status.textContent = "Menyambung kembali...";
+            if (session.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+            session.iceDisconnectTimer = setTimeout(() => {
+              if (callSession === session && currentCall === attempt) finish(false);
+            }, 2000);
+          } else if (state === "failed") {
+            status.textContent = "Koneksi panggilan terputus.";
+            finish(false);
+          }
+        });
+        // PeerJS MediaConnection yang berhasil dibuat belum berarti lawan
+        // menerima panggilan. Beri waktu lebih (wake/auto-jawab/jaringan lambat)
+        // sebelum mengakhiri sesi.
+        session.connectTimer = setTimeout(() => {
+          if (callSession === session && currentCall === attempt && !remoteReceived) {
+            status.textContent = "Tidak ada jawaban dari penerima.";
+            finish(false);
+          }
+        }, 30000);
+        return true;
+      } catch (error) {
+        status.textContent = mediaErrorMessage(error, "Gagal memulai panggilan");
+        return false;
+      }
+    };
+    async function open(mode) {
+      // Abaikan ketukan berulang selama satu sesi panggilan sedang berjalan.
+      if (!callEnded || callSession) return;
+      const view = panel(mode),
+        local =
+          mode === "video"
+            ? view?.querySelector("#video-local")
+            : view?.querySelector("audio"),
+        remote =
+          mode === "video" ? view?.querySelector("#video-remote") : local,
+        target = window.CallMeChat?.activePeer?.();
+      if (!view || !local || !target) return;
+      callEnded = false;
+      remoteReceived = false;
+      const session = { kind: "outgoing", peerId: target, mode, returnPanel: "chatroom", accepted: true, logId: null };
+      callSession = session;
+      clearCallMedia();
+      setChatCallButtonsHidden(true);
+      window.CallMeApp.show(`${mode}-call`);
+      const status = view.querySelector('[id$="-call-status"]'),
+        name = view.querySelector(`#${mode}-call-name`);
+      setIncomingControls(view, false);
+      setCallNameVisible(view, true);
+      // Bersihkan status lama ("Tersambung" dari sesi sebelumnya) agar tidak
+      // menyesatkan saat sesi baru dimulai.
+      if (status) status.textContent = "Memulai panggilan...";
+      if (name)
+        name.textContent =
+          document.getElementById("chat-title")?.textContent ||
+          window.CallMeIdentity?.withoutPeerPrefix?.(target) || target;
+      // Sumber nama harus sama dengan jalur masuk: profil contact lebih dulu,
+      // lalu fallback Peer ID. Jangan menimpa setelah sesi diganti/berakhir.
+      void displayNameForPeer(target).then((label) => {
+        if (callSession?.kind === "outgoing" && callSession?.peerId === target && name)
+          name.textContent = label;
+      });
+      if (mode === "voice") void setVoiceAvatar(target);
+      // Ikon besar + nama panggilan video kini juga tampil di sisi pemanggil,
+      // sama seperti sisi penerima.
+      if (mode === "video") void setVideoAvatar(target, view);
+      // Buat ID log sebelum media/FCM dimulai supaya status Jawab/Tolak
+      // selalu memperbarui baris yang sama di kedua sisi.
+      const log = await createCallLog(target, mode, "outgoing");
+      if (callSession !== session) return;
+      session.logId = log?.id || null;
+      // Minta jawaban status pada koneksi yang aktif. Timeout berarti tidur/
+      // tidak terjangkau dan FCM menjadi mekanisme bangun.
+      const awake = window.CallMeP2P?.isConnected?.(target) ||
+        await window.CallMeP2P?.probe?.(target, 2000);
+      if (callSession !== session || callEnded) return;
+      if (awake) {
+        void startOutgoingP2P(mode, target, session);
+      } else {
+        session.waitingForAnswer = true;
+        const p2pReady = window.CallMeP2P?.isPeerReady?.();
+        status.textContent = p2pReady ? "Menunggu jawaban..." : "Koneksi P2P belum siap, menunggu jawaban lewat notifikasi...";
+        window.CallMePush?.call?.(target, mode === "video", session.logId);
+        callSession.answerTimer = setTimeout(() => {
+          if (callSession !== session || !session.waitingForAnswer) return;
+          session.waitingForAnswer = false;
+          if (session.logId) void updateCallLog(session.logId, target, "missed");
+          finish(false);
+        }, 30000);
+        // Fallback: probe/presence bisa gagal walau peer sebenarnya hidup & siap
+        // (mis. APK baru bangun). Coba mulai P2P media berkala selama menunggu
+        // jawaban, tanpa bergantung konfirmasi "ready", sampai terhubung/diterima/
+        // timeout. Ini mencegah berhenti mencoba terlalu dini.
+        void (async () => {
+          let delay = 1200;
+          while (callSession === session && !callEnded && session.waitingForAnswer && !remoteReceived) {
+            // Percobaan media sedang berjalan (currentCall terisi) — tunggu
+            // hasilnya; error/close akan mengosongkan currentCall sehingga
+            // retry berlanjut, dan jawaban tetap mengakhiri loop.
+            if (currentCall) {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              continue;
+            }
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            if (callSession !== session || callEnded || !session.waitingForAnswer || currentCall || remoteReceived) continue;
+            await startOutgoingP2P(mode, target, session);
+            delay = Math.min(delay + 800, 4000);
+          }
+        })();
+      }
+    }
+    document
+      .querySelectorAll("[data-call]")
+      .forEach((button) =>
+        button.addEventListener("click", () => open(button.dataset.call)),
+      );
+    document
+      .querySelectorAll("[data-call-reject]")
+      .forEach((button) =>      button.addEventListener("click", async () => {
+        const incoming = pendingIncoming?.incoming;
+        const target = incoming?.peer || incoming?.peerId;
+        if (incoming) await activateCallRoom(target);
+        if (incoming && pendingIncoming?.incoming !== incoming) return;
+        if (incoming) {
+          if (callSession?.logId)
+            void updateCallLog(callSession.logId, target, "rejected");
+          if (callSession) callSession.rejected = true;
+          if (target) {
+            try { window.CallMeP2P?.sendCallControl?.({ kind: "call-declined", callLogId: callSession?.logId || "" }, target); } catch (_) {}
+            try { window.CallMeAndroid?.declinedCall?.(target, callSession?.logId || ""); } catch (_) {}
+          }
+        }
+        window.CallMeAndroid?.cancelCall?.();
+        finish(false);
+      }));
+    document.querySelectorAll("[data-call-accept]").forEach((button) => {
+      button.innerHTML = '<img src="https://api.iconify.design/material-symbols/call.svg?color=%23fff" alt="">';
+      button.querySelector("img").style.cssText = "width:28px;height:28px;display:block";
+    });
+    document.querySelectorAll("[data-call-accept]").forEach((button) =>
+      button.addEventListener("click", async () => {
+        if (!pendingIncoming || button.dataset.callAccept !== pendingIncoming.mode)
+          return;
+        const { incoming, mode } = pendingIncoming;
+        const session = callSession;
+        if (session) session.accepted = true;
+        await activateCallRoom(incoming.peer || incoming.peerId);
+        if (pendingIncoming?.incoming !== incoming || callSession !== session || callEnded) return;
+        pendingIncoming = null;
+        if (session) session.accepted = true;
+        // Panggilan diterima → status log naik dari "started" ke "accepted"
+        // (label "berhasil"). Tanpa ini status tetap "started" sehingga log
+        // selamanya menampilkan fallback "Memanggil". Kiriman P2P memakai logId
+        // yang sama, jadi baris pemanggil ikut terbarui — sama seperti jalur
+        // "rejected" yang sudah menyentuh kedua sisi.
+        if (session?.logId)
+          void updateCallLog(session.logId, incoming.peer || incoming.peerId, "accepted");
+        const view = panel(mode),
+          local = mode === "video" ? view?.querySelector("#video-local") : view?.querySelector("audio"),
+          remote = mode === "video" ? view?.querySelector("#video-remote") : local,
+          status = view?.querySelector('[id$="-call-status"]');
+        if (!view || !local || !status) return;
+        // Setelah diterima, hanya tombol tutup merah yang tersisa dan tetap terpusat.
+        setIncomingControls(view, false);
+        window.CallMeApp.show(`${mode}-call`);
+        setChatCallButtonsHidden(true);
+        try {
+          const localStream = await captureLocalStream(mode, status);
+          if (callEnded || callSession !== session || !session) {
+            localStream.getTracks().forEach((track) => track.stop());
+            try { incoming.close(); } catch {}
+            return;
+          }
+          stream = localStream;
+          setMediaSource(local, localStream);
+          local.muted = true;
+          currentCall = incoming;
+          incoming.on("stream", (received) => {
+            if (callEnded || callSession !== session || currentCall !== incoming) return;
+            remoteReceived = true;
+            if (session.connectTimer) clearTimeout(session.connectTimer);
+            bindRemoteStream(remote, received, status);
+          });
+          session.connectTimer = setTimeout(() => {
+            if (callSession === session && currentCall === incoming && !remoteReceived) finish(false);
+          }, 30000);
+          incoming.answer(localStream);
+          window.CallMeAndroid?.answeredCall?.();
+          status.textContent = "Menghubungkan...";
+          incoming.on("close", () => {
+            if (callSession === session && currentCall === incoming) finish(false);
+          });
+          incoming.on("error", () => { status.textContent = "Panggilan gagal"; finish(false); });
+          incoming.on("iceStateChanged", (state) => {
+            if (callSession !== session || currentCall !== incoming) return;
+            if (state === "connected" || state === "completed") {
+              if (session.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+              session.iceDisconnectTimer = null;
+            } else if (state === "disconnected") {
+              status.textContent = "Menyambung kembali...";
+              if (session.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+              session.iceDisconnectTimer = setTimeout(() => {
+                if (callSession === session && currentCall === incoming) finish(false);
+              }, 2000);
+            } else if (state === "failed") {
+              finish(false);
+            }
+          });
+        } catch (error) {
+          status.textContent = mediaErrorMessage(error, "Gagal menerima panggilan");
+          try { incoming.close(); } catch {}
+        }
+      }),
+    );
+    const handleCallAccepted = (peerId, callId) => {
+      if (callSession?.kind !== "outgoing" || !callSession.waitingForAnswer) return;
+      if (String(peerId || "").replace(/^cm-/i, "").toLowerCase() !==
+          String(callSession.peerId || "").replace(/^cm-/i, "").toLowerCase()) return;
+      if (callId && callSession.logId && callId !== callSession.logId) return;
+      if (callSession.acceptResponseHandled) return;
+      callSession.acceptResponseHandled = true;
+      callSession.waitingForAnswer = false;
+      if (callSession.answerTimer) clearTimeout(callSession.answerTimer);
+      if (callSession.logId) void updateCallLog(callSession.logId, callSession.peerId, "accepted");
+      void (async () => {
+        const session = callSession;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          if (callSession !== session || callEnded || session.kind !== "outgoing") return;
+          if (currentCall || remoteReceived) return;
+          await startOutgoingP2P(session.mode, session.peerId, session);
+          if (callSession !== session || callEnded || currentCall || remoteReceived) return;
+          const statusEl = panel(session.mode)?.querySelector('[id$="-call-status"]');
+          if (statusEl) statusEl.textContent = "Penerima siap, mencoba menghubungkan...";
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      })();
+    };
+    window.addEventListener("callme:p2p-message", (event) => {
+      const detail = event.detail || {};
+      if (detail.kind === "call-hangup") {
+        finish(false);
+        return;
+      }
+      if (detail.kind === "call-declined") {
+        const peerId = detail.senderPeerId || detail.peerId || "";
+        if (callSession?.kind === "outgoing" && peerId &&
+            String(peerId).replace(/^cm-/i, "").toLowerCase() ===
+            String(callSession.peerId || "").replace(/^cm-/i, "").toLowerCase()) {
+          callSession.waitingForAnswer = false;
+          if (callSession.answerTimer) clearTimeout(callSession.answerTimer);
+          if (callSession.logId) void updateCallLog(callSession.logId, callSession.peerId, "rejected");
+        }
+        finish(false);
+        return;
+      }
+      if (detail.kind === "call-accepted") {
+        handleCallAccepted(detail.senderPeerId || detail.peerId || detail.sender || "", detail.callLogId || detail.id || detail.callId || "");
+        return;
+      }
+    });
+    window.addEventListener("callme:fcm-call-accepted", (event) => {
+      handleCallAccepted(event.detail?.peerId || "", event.detail?.callId || "");
+    });
+    window.addEventListener("callme:fcm-call-declined", (event) => {
+      const peerId = event.detail?.peerId || "";
+      if (callSession?.kind !== "outgoing" || !callSession.waitingForAnswer ||
+          String(peerId).replace(/^cm-/i, "").toLowerCase() !==
+          String(callSession.peerId).replace(/^cm-/i, "").toLowerCase()) return;
+      if (event.detail?.callId && callSession.logId && event.detail.callId !== callSession.logId) return;
+      callSession.waitingForAnswer = false;
+      if (callSession.answerTimer) clearTimeout(callSession.answerTimer);
+      if (callSession.logId) void updateCallLog(callSession.logId, peerId, "rejected");
+      window.CallMeAndroid?.declinedCall?.();
+      finish(false);
+    });
+    window.addEventListener("callme:incoming-call", async (event) => {
+      const incoming = event.detail;
+      if (!incoming) return;
+      // Simpan panel asal sebelum lookup nama atau operasi async lainnya.
+      const incomingPeer = incoming.peer || incoming.peerId;
+      if (!incomingPeer) return;
+      const videoRequested =
+        incoming.metadata?.video === true ||
+        incoming.metadata?.video === "true" ||
+        incoming.metadata?.metadata?.video === true;
+      const mode = videoRequested ? "video" : "voice";
+      callEnded = false;
+      const originPanel = window.CallMeApp.current?.() === "chatroom" && window.CallMeChat?.activePeer?.() ? "chatroom" : "friends";
+      callSession = {
+        kind: "incoming",
+        peerId: incomingPeer,
+        returnPanel: originPanel,
+        logId: incoming.metadata?.callLogId || "",
+        accepted: false,
+      };
+      void saveIncomingCallLog(incomingPeer, mode, callSession.logId).then((localLog) => {
+        if (callSession?.peerId === incomingPeer)
+          callSession.logId = localLog?.id || callSession.logId;
+      });
+      pendingIncoming = { incoming, mode };
+      incoming.on("close", () => {
+        if (callSession?.peerId === incomingPeer && pendingIncoming?.incoming === incoming) {
+          // Pemanggil menutup sebelum dijawab: notifikasi dering native masih
+          // tampil saat aplikasi di latar belakang — batalkan ikut dengannya.
+          if (!callSession?.accepted) window.CallMeAndroid?.cancelCall?.();
+          finish(false);
+        }
+      });
+      // Panel bisa belum siap bila event datang sangat awal (halaman baru
+      // bangun dari tidur). Jangan tinggalkan sesi dering tanpa panel — log
+      // "tak terjawab" ikut tercatat padahal tidak ada yang bisa menjawab.
+      const armPanel = (tries) => {
+        if (pendingIncoming?.incoming !== incoming || callEnded) return;
+        const view = panel(mode),
+          local =
+            mode === "video"
+              ? view?.querySelector("#video-local")
+              : view?.querySelector("audio"),
+          remote =
+            mode === "video" ? view?.querySelector("#video-remote") : local;
+        if (!view || !local) {
+          if (tries < 20) setTimeout(() => armPanel(tries + 1), 250);
+          return;
+        }
+        const status = view.querySelector('[id$="-call-status"]'),
+          name = view.querySelector(`#${mode}-call-name`);
+        setCallNameVisible(view, true);
+        if (name) name.textContent = window.CallMeIdentity?.withoutPeerPrefix?.(incomingPeer) || String(incomingPeer).replace(/^cm-/i, "");
+        void displayNameForPeer(incomingPeer).then((label) => {
+          if (pendingIncoming?.incoming === incoming && name) name.textContent = label;
+        });
+        // Aktifkan panel segera dari cache. Refresh Spreadsheet/Drive berjalan
+        // di background agar panggilan tidak tertahan oleh sinkronisasi profil.
+        if (mode === "voice") void setVoiceAvatar(incomingPeer);
+        if (mode === "video") void setVideoAvatar(incomingPeer, view);
+        // Panggilan bisa ditutup selama lookup nama berlangsung. Jangan biarkan
+        // handler lama menghidupkan panel panggilan kembali setelah finish().
+        if (pendingIncoming?.incoming !== incoming) return;
+        window.CallMeApp.show(`${mode}-call`);
+        setIncomingControls(view, true);
+        status.textContent = mode === "video" ? "Panggilan video masuk" : "Panggilan suara masuk";
+        const tryAutoAnswer = () => {
+          if (!window.__callmeAutoAnswerPending) return false;
+          const btn = view.querySelector(`[data-call-accept="${mode}"]`);
+          if (!btn || btn.hidden || pendingIncoming?.incoming !== incoming) return false;
+          window.__callmeAutoAnswerPending = false;
+          btn.click();
+          return true;
+        };
+        if (!tryAutoAnswer()) {
+          // Polling berjalan selama sesi dering masih hidup: flag auto-jawab
+          // bisa diset jauh lebih lambat (Jawab ditekan di notifikasi beberapa
+          // detik setelah panggilan P2P masuk). Versi lama berhenti pada tick
+          // pertama saat flag belum terisi, sehingga auto-jawab mati total.
+          let attempts = 0;
+          const timer = setInterval(() => {
+            attempts++;
+            if (tryAutoAnswer() || pendingIncoming?.incoming !== incoming || callEnded || callSession?.accepted || attempts > 400) {
+              clearInterval(timer);
+            }
+          }, 150);
+        }
+        // Jaga panel dering tetap tampil: init/session-restore/deep-link bisa
+        // berpindah panel tepat setelah show(). Selama dering belum berakhir,
+        // paksa kembali ke panel panggilan tiap detik.
+        const watchdog = setInterval(() => {
+          if (pendingIncoming?.incoming !== incoming || callEnded) {
+            clearInterval(watchdog);
+            return;
+          }
+          if (window.CallMeApp?.current?.() !== `${mode}-call`) window.CallMeApp.show(`${mode}-call`);
+        }, 1000);
+        incoming.on("error", () => {
+          if (pendingIncoming?.incoming === incoming) status.textContent = "Panggilan gagal";
+        });
+      };
+      armPanel(0);
+    });
+  });
+})();
