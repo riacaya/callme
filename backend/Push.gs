@@ -31,6 +31,15 @@ function pushRegister_(body) {
   if (!peerId || (!token && !webToken)) return { ok: false, error: 'peerId/token kosong' };
   const props = PropertiesService.getScriptProperties();
   const tokens = safeParse_(props.getProperty(PUSH_.tokensKey)) || {};
+  // Token web browser harus terikat ke akun login aktif saja (hindari notif lintas-akun).
+  if (webToken) {
+    Object.keys(tokens).forEach(function (k) {
+      if (k !== peerId && tokens[k] && tokens[k].webToken === webToken) {
+        delete tokens[k].webToken;
+        if (!tokens[k].token) delete tokens[k];
+      }
+    });
+  }
   const entry = tokens[peerId] || {};
   if (token) entry.token = token;
   if (webToken) entry.webToken = webToken;
