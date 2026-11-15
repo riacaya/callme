@@ -50,6 +50,48 @@
     user: "",
   };
 
+  var FIREBASE_SDKS = [
+    "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js",
+    "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js",
+  ];
+  var firebaseLoadPromise = null;
+
+  function loadScriptOnce(src) {
+    return new Promise(function (resolve) {
+      try {
+        var existing = Array.prototype.slice.call(document.scripts || []).some(function (s) { return s && s.src === src; });
+        if (existing) {
+          // Sudah ada tag; tunggu sebentar agar sempat dieksekusi.
+          setTimeout(function () { resolve(true); }, 0);
+          return;
+        }
+        var s = document.createElement("script");
+        s.src = src;
+        s.async = false;
+        s.onload = function () { resolve(true); };
+        s.onerror = function () { resolve(false); };
+        (document.head || document.documentElement).appendChild(s);
+      } catch (_) { resolve(false); }
+    });
+  }
+
+  function ensureFirebase() {
+    if (window.firebase && typeof firebase.initializeApp === "function" && typeof firebase.messaging === "function") {
+      return Promise.resolve(true);
+    }
+    if (firebaseLoadPromise) return firebaseLoadPromise;
+    firebaseLoadPromise = (async function () {
+      for (var i = 0; i < FIREBASE_SDKS.length; i++) {
+        await loadScriptOnce(FIREBASE_SDKS[i]);
+      }
+      return !!(window.firebase && typeof firebase.initializeApp === "function" && typeof firebase.messaging === "function");
+    })().catch(function () { return false; });
+    return firebaseLoadPromise.then(function (ok) {
+      if (!ok) firebaseLoadPromise = null; // izinkan coba lagi nanti
+      return ok;
+    });
+  }
+
   function getConfig() {
     var cfg = (typeof self !== "undefined" && self.CALLME_WEB_PUSH) || window.CALLME_WEB_PUSH || null;
     if (!cfg || !cfg.apiKey || !cfg.projectId || !cfg.messagingSenderId || !cfg.appId || !cfg.vapidPublicKey) return null;
@@ -72,17 +114,22 @@
     state.initPromise = Promise.resolve().then(function () {
       var cfg = getConfig();
       if (!cfg) return null;
-      if (!window.firebase || typeof firebase.initializeApp !== "function") return null;
-      var app;
-      try {
-        app = firebase.app("callme-web-push");
-      } catch (_) {
-        try { app = firebase.initializeApp(cfg, "callme-web-push"); }
-        catch (e2) { try { app = firebase.initializeApp(cfg); } catch (e3) { app = null; } }
-      }
-      if (!app || typeof firebase.messaging !== "function") return null;
-      try { state.messaging = firebase.messaging(app); } catch (_) { state.messaging = null; }
-      return state.messaging;
+      return ensureFirebase().then(function (ok) {
+        if (!ok || !window.firebase || typeof firebase.initializeApp !== "function") return null;
+        var app;
+        try {
+          app = firebase.app("callme-web-push");
+        } catch (_) {
+          try { app = firebase.initializeApp(cfg, "callme-web-push"); }
+          catch (e2) { try { app = firebase.initializeApp(cfg); } catch (e3) { app = null; } }
+        }
+        if (!app || typeof firebase.messaging !== "function") return null;
+        try { state.messaging = firebase.messaging(app); } catch (_) { state.messaging = null; }
+        return state.messaging;
+      });
+    }).then(function (res) {
+      if (!res) state.initPromise = null; // izinkan coba lagi (mis. SDK sempat gagal dimuat)
+      return res;
     });
     return state.initPromise;
   }
