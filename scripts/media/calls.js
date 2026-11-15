@@ -280,13 +280,37 @@
           if (callEnded || callSession !== session || currentCall !== attempt) return;
           remoteReceived = true;
           if (session.connectTimer) clearTimeout(session.connectTimer);
+          // Aliran remote sudah membuktikan panggilan terjawab — hentikan
+          // hitung mundur "menunggu jawaban" walau sinyal call-accepted hilang
+          // (penerima bangun dari tidur & token push pemanggil tidak ada).
+          if (session.waitingForAnswer) {
+            session.waitingForAnswer = false;
+            if (session.answerTimer) clearTimeout(session.answerTimer);
+            session.answerTimer = null;
+            if (session.logId) void updateCallLog(session.logId, session.peerId, "accepted");
+          }
           bindRemoteStream(remote, incoming, status);
         });
+        // Selama masih menunggu jawaban, close/error satu percobaan TIDAK
+        // mengakhiri sesi: bersihkan currentCall supaya loop retry memanggil
+        // ulang (penerima mungkin baru bangun / peer belum terdaftar di server).
         attempt.on("close", () => {
-          if (callSession === session && currentCall === attempt) finish(false);
+          if (callSession !== session || currentCall !== attempt) return;
+          if (session.waitingForAnswer && !remoteReceived) {
+            currentCall = null;
+            status.textContent = "Menunggu jawaban...";
+            return;
+          }
+          finish(false);
         });
         attempt.on("error", () => {
           if (callSession !== session || currentCall !== attempt) return;
+          if (session.waitingForAnswer && !remoteReceived) {
+            currentCall = null;
+            try { attempt.close(); } catch {}
+            status.textContent = "Menunggu jawaban...";
+            return;
+          }
           status.textContent = "Panggilan gagal. Periksa koneksi lalu coba lagi.";
           finish(false);
         });
@@ -387,9 +411,16 @@
         // timeout. Ini mencegah berhenti mencoba terlalu dini.
         void (async () => {
           let delay = 1200;
-          while (callSession === session && !callEnded && session.waitingForAnswer && !currentCall && !remoteReceived) {
+          while (callSession === session && !callEnded && session.waitingForAnswer && !remoteReceived) {
+            // Percobaan media sedang berjalan (currentCall terisi) — tunggu
+            // hasilnya; error/close akan mengosongkan currentCall sehingga
+            // retry berlanjut, dan jawaban tetap mengakhiri loop.
+            if (currentCall) {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              continue;
+            }
             await new Promise((resolve) => setTimeout(resolve, delay));
-            if (callSession !== session || callEnded || !session.waitingForAnswer || currentCall || remoteReceived) return;
+            if (callSession !== session || callEnded || !session.waitingForAnswer || currentCall || remoteReceived) continue;
             await startOutgoingP2P(mode, target, session);
             delay = Math.min(delay + 800, 4000);
           }
@@ -586,54 +617,82 @@
       });
       pendingIncoming = { incoming, mode };
       incoming.on("close", () => {
-        if (callSession?.peerId === incomingPeer && pendingIncoming?.incoming === incoming)
+        if (callSession?.peerId === incomingPeer && pendingIncoming?.incoming === incoming) {
+          // Pemanggil menutup sebelum dijawab: notifikasi dering native masih
+          // tampil saat aplikasi di latar belakang — batalkan ikut dengannya.
+          if (!callSession?.accepted) window.CallMeAndroid?.cancelCall?.();
           finish(false);
+        }
       });
-      const view = panel(mode),
-        local =
-          mode === "video"
-            ? view?.querySelector("#video-local")
-            : view?.querySelector("audio"),
-        remote =
-          mode === "video" ? view?.querySelector("#video-remote") : local;
-      if (!view || !local) return;
-      const status = view.querySelector('[id$="-call-status"]'),
-        name = view.querySelector(`#${mode}-call-name`);
-      setCallNameVisible(view, true);
-      if (name) name.textContent = window.CallMeIdentity?.withoutPeerPrefix?.(incomingPeer) || String(incomingPeer).replace(/^cm-/i, "");
-      void displayNameForPeer(incomingPeer).then((label) => {
-        if (pendingIncoming?.incoming === incoming && name) name.textContent = label;
-      });
-      // Aktifkan panel segera dari cache. Refresh Spreadsheet/Drive berjalan
-      // di background agar panggilan tidak tertahan oleh sinkronisasi profil.
-      if (mode === "voice") void setVoiceAvatar(incomingPeer);
-      if (mode === "video") void setVideoAvatar(incomingPeer, view);
-      // Panggilan bisa ditutup selama lookup nama berlangsung. Jangan biarkan
-      // handler lama menghidupkan panel panggilan kembali setelah finish().
-      if (pendingIncoming?.incoming !== incoming) return;
-      window.CallMeApp.show(`${mode}-call`);
-      setIncomingControls(view, true);
-      status.textContent = mode === "video" ? "Panggilan video masuk" : "Panggilan suara masuk";
-      const tryAutoAnswer = () => {
-        if (!window.__callmeAutoAnswerPending) return false;
-        const btn = view.querySelector(`[data-call-accept="${mode}"]`);
-        if (!btn || btn.hidden || pendingIncoming?.incoming !== incoming) return false;
-        window.__callmeAutoAnswerPending = false;
-        btn.click();
-        return true;
-      };
-      if (!tryAutoAnswer()) {
-        let attempts = 0;
-        const timer = setInterval(() => {
-          attempts++;
-          if (tryAutoAnswer() || !window.__callmeAutoAnswerPending || pendingIncoming?.incoming !== incoming || attempts > 40) {
-            clearInterval(timer);
+      // Panel bisa belum siap bila event datang sangat awal (halaman baru
+      // bangun dari tidur). Jangan tinggalkan sesi dering tanpa panel — log
+      // "tak terjawab" ikut tercatat padahal tidak ada yang bisa menjawab.
+      const armPanel = (tries) => {
+        if (pendingIncoming?.incoming !== incoming || callEnded) return;
+        const view = panel(mode),
+          local =
+            mode === "video"
+              ? view?.querySelector("#video-local")
+              : view?.querySelector("audio"),
+          remote =
+            mode === "video" ? view?.querySelector("#video-remote") : local;
+        if (!view || !local) {
+          if (tries < 20) setTimeout(() => armPanel(tries + 1), 250);
+          return;
+        }
+        const status = view.querySelector('[id$="-call-status"]'),
+          name = view.querySelector(`#${mode}-call-name`);
+        setCallNameVisible(view, true);
+        if (name) name.textContent = window.CallMeIdentity?.withoutPeerPrefix?.(incomingPeer) || String(incomingPeer).replace(/^cm-/i, "");
+        void displayNameForPeer(incomingPeer).then((label) => {
+          if (pendingIncoming?.incoming === incoming && name) name.textContent = label;
+        });
+        // Aktifkan panel segera dari cache. Refresh Spreadsheet/Drive berjalan
+        // di background agar panggilan tidak tertahan oleh sinkronisasi profil.
+        if (mode === "voice") void setVoiceAvatar(incomingPeer);
+        if (mode === "video") void setVideoAvatar(incomingPeer, view);
+        // Panggilan bisa ditutup selama lookup nama berlangsung. Jangan biarkan
+        // handler lama menghidupkan panel panggilan kembali setelah finish().
+        if (pendingIncoming?.incoming !== incoming) return;
+        window.CallMeApp.show(`${mode}-call`);
+        setIncomingControls(view, true);
+        status.textContent = mode === "video" ? "Panggilan video masuk" : "Panggilan suara masuk";
+        const tryAutoAnswer = () => {
+          if (!window.__callmeAutoAnswerPending) return false;
+          const btn = view.querySelector(`[data-call-accept="${mode}"]`);
+          if (!btn || btn.hidden || pendingIncoming?.incoming !== incoming) return false;
+          window.__callmeAutoAnswerPending = false;
+          btn.click();
+          return true;
+        };
+        if (!tryAutoAnswer()) {
+          // Polling berjalan selama sesi dering masih hidup: flag auto-jawab
+          // bisa diset jauh lebih lambat (Jawab ditekan di notifikasi beberapa
+          // detik setelah panggilan P2P masuk). Versi lama berhenti pada tick
+          // pertama saat flag belum terisi, sehingga auto-jawab mati total.
+          let attempts = 0;
+          const timer = setInterval(() => {
+            attempts++;
+            if (tryAutoAnswer() || pendingIncoming?.incoming !== incoming || callEnded || callSession?.accepted || attempts > 400) {
+              clearInterval(timer);
+            }
+          }, 150);
+        }
+        // Jaga panel dering tetap tampil: init/session-restore/deep-link bisa
+        // berpindah panel tepat setelah show(). Selama dering belum berakhir,
+        // paksa kembali ke panel panggilan tiap detik.
+        const watchdog = setInterval(() => {
+          if (pendingIncoming?.incoming !== incoming || callEnded) {
+            clearInterval(watchdog);
+            return;
           }
-        }, 150);
-      }
-      incoming.on("error", () => {
-        if (pendingIncoming?.incoming === incoming) status.textContent = "Panggilan gagal";
-      });
+          if (window.CallMeApp?.current?.() !== `${mode}-call`) window.CallMeApp.show(`${mode}-call`);
+        }, 1000);
+        incoming.on("error", () => {
+          if (pendingIncoming?.incoming === incoming) status.textContent = "Panggilan gagal";
+        });
+      };
+      armPanel(0);
     });
   });
 })();
