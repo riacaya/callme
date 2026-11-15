@@ -381,17 +381,17 @@
           if (session.logId) void updateCallLog(session.logId, target, "missed");
           finish(false);
         }, 30000);
-        // Fallback: probe/presence bisa gagal walau peer sebenarnya hidup & siap.
-        // Coba mulai P2P media juga sambil menunggu sinyal "accepted" (wake/push),
-        // dengan jeda bertahap agar tidak spam.
+        // Fallback: probe/presence bisa gagal walau peer sebenarnya hidup & siap
+        // (mis. APK baru bangun). Coba mulai P2P media berkala selama menunggu
+        // jawaban, tanpa bergantung konfirmasi "ready", sampai terhubung/diterima/
+        // timeout. Ini mencegah berhenti mencoba terlalu dini.
         void (async () => {
-          const delays = [1200, 3000, 3000, 4000, 5000];
-          for (const delay of delays) {
+          let delay = 1200;
+          while (callSession === session && !callEnded && session.waitingForAnswer && !currentCall && !remoteReceived) {
             await new Promise((resolve) => setTimeout(resolve, delay));
-            if (callSession !== session || callEnded || !session.waitingForAnswer) return;
-            if (currentCall || remoteReceived) return;
-            const started = await startOutgoingP2P(mode, target, session);
-            if (started || currentCall || remoteReceived) return;
+            if (callSession !== session || callEnded || !session.waitingForAnswer || currentCall || remoteReceived) return;
+            await startOutgoingP2P(mode, target, session);
+            delay = Math.min(delay + 800, 4000);
           }
         })();
       }
