@@ -211,6 +211,7 @@
           (session?.kind === "incoming" && session.accepted),
         returnPanel = session?.returnPanel || "friends";
       callEnded = true;
+      try { session?.__cleanupAttempt?.(); } catch {}
       if (session?.answerTimer) clearTimeout(session.answerTimer);
       if (session?.connectTimer) clearTimeout(session.connectTimer);
       if (session?.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
@@ -276,8 +277,52 @@
           return false;
         }
         currentCall = attempt;
+        let attemptWatchdog = null;
+        const cleanupAttempt = () => {
+          window.removeEventListener("callme:p2p-error", onPeerErr);
+          if (attemptWatchdog) {
+            clearTimeout(attemptWatchdog);
+            attemptWatchdog = null;
+          }
+          if (session.__cleanupAttempt === cleanupAttempt) session.__cleanupAttempt = null;
+        };
+        const releaseForRetry = () => {
+          if (callSession !== session || currentCall !== attempt) return;
+          cleanupAttempt();
+          if (session.connectTimer) clearTimeout(session.connectTimer);
+          session.connectTimer = null;
+          currentCall = null;
+          try { attempt.close(); } catch {}
+          if (session.waitingForAnswer && !remoteReceived && !callEnded) {
+            status.textContent = "Menunggu jawaban...";
+          }
+        };
+        // EXPIRE dari PeerJS (peer tujuan belum terdaftar di server — mis. APK
+        // baru bangun dari tidur) dipancarkan sebagai error peer-level, bukan
+        // error/close MediaConnection. Tanpa ini, currentCall terkunci dan loop
+        // retry berhenti mencoba sehingga pemanggil menunggu sampai timeout.
+        const onPeerErr = (e) => {
+          const detail = e?.detail || {};
+          const err = detail.error || detail;
+          if (detail.scope !== "connection" || err?.type !== "peer-unavailable") return;
+          if (callSession !== session || currentCall !== attempt || remoteReceived || callEnded) return;
+          if (!session.waitingForAnswer) return;
+          const msg = String(err?.message || "");
+          if (msg && !msg.includes(String(target || ""))) return;
+          releaseForRetry();
+        };
+        window.addEventListener("callme:p2p-error", onPeerErr);
+        // Jaring pengaman: bila percobaan macet (EXPIRE/close tak terpicu, ICE
+        // tak maju) lepaskan agar loop retry bisa mengirim offer baru.
+        attemptWatchdog = setTimeout(() => {
+          if (callSession !== session || currentCall !== attempt || remoteReceived || callEnded) return;
+          if (!session.waitingForAnswer) return;
+          releaseForRetry();
+        }, 12000);
+        session.__cleanupAttempt = cleanupAttempt;
         attempt.on("stream", (incoming) => {
           if (callEnded || callSession !== session || currentCall !== attempt) return;
+          cleanupAttempt();
           remoteReceived = true;
           if (session.connectTimer) clearTimeout(session.connectTimer);
           // Aliran remote sudah membuktikan panggilan terjawab — hentikan
@@ -296,7 +341,10 @@
         // ulang (penerima mungkin baru bangun / peer belum terdaftar di server).
         attempt.on("close", () => {
           if (callSession !== session || currentCall !== attempt) return;
+          cleanupAttempt();
           if (session.waitingForAnswer && !remoteReceived) {
+            if (session.connectTimer) clearTimeout(session.connectTimer);
+            session.connectTimer = null;
             currentCall = null;
             status.textContent = "Menunggu jawaban...";
             return;
@@ -305,7 +353,10 @@
         });
         attempt.on("error", () => {
           if (callSession !== session || currentCall !== attempt) return;
+          cleanupAttempt();
           if (session.waitingForAnswer && !remoteReceived) {
+            if (session.connectTimer) clearTimeout(session.connectTimer);
+            session.connectTimer = null;
             currentCall = null;
             try { attempt.close(); } catch {}
             status.textContent = "Menunggu jawaban...";
@@ -368,6 +419,9 @@
         name = view.querySelector(`#${mode}-call-name`);
       setIncomingControls(view, false);
       setCallNameVisible(view, true);
+      // Bersihkan status lama ("Tersambung" dari sesi sebelumnya) agar tidak
+      // menyesatkan saat sesi baru dimulai.
+      if (status) status.textContent = "Memulai panggilan...";
       if (name)
         name.textContent =
           document.getElementById("chat-title")?.textContent ||
