@@ -42,7 +42,10 @@
       window.CallMeP2P?.stop();
       sessionStorage.removeItem("callme-v2-session-user");
       sessionStorage.removeItem("callme-v2-session-token");
+      localStorage.removeItem("callme-v2-session-token");
       localStorage.removeItem("callme-v2-persistent-session");
+      localStorage.removeItem("callme-v2-user");
+      window.dispatchEvent(new CustomEvent("callme:session-user", { detail: { user: "" } }));
       window.CallMeApp.show("login");
     });
 

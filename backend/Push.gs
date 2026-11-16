@@ -82,7 +82,7 @@ function pushNotify_(body) {
   if (!projectId || !accountRaw) return { ok: false, error: 'konfigurasi push belum diisi' };
 
   try {
-    const data = { kind, title, body: text };
+    const data = { kind, title, body: text, recipient: String(to).slice(0, 120), to: String(to).slice(0, 120) };
     // Meta pesan (antrean offline): diteruskan apa adanya ke payload FCM
     // data sehingga penerima yang aplikasinya mati bisa menyimpan pesan ke
     // chatroom saat dibangunkan (MyFirebaseMessagingService → drainQueue).

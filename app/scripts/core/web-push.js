@@ -50,6 +50,40 @@
     user: "",
   };
 
+  // Beri tahu service worker akun mana yang aktif agar notifikasi lintas-akun
+  // (token/server state basi) tidak ditampilkan ke pengguna yang salah.
+  var activeUserWrite = Promise.resolve();
+  function setActivePushUser(user) {
+    var u = bare(user);
+    activeUserWrite = activeUserWrite.then(function () {
+      return new Promise(function (resolve) {
+        try {
+          var req = indexedDB.open("callme-v2", 5);
+          req.onerror = req.onblocked = function () { resolve(); };
+          req.onupgradeneeded = function () {
+            var db = req.result;
+            if (db.objectStoreNames.contains("event-log")) db.deleteObjectStore("event-log");
+            ["contacts", "messages", "media", "settings", "unread"].forEach(function (s) {
+              var key = s === "contacts" || s === "unread" ? "peerId" : (s === "settings" ? "key" : "id");
+              if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: key });
+            });
+          };
+          req.onsuccess = function () {
+            var db = req.result;
+            try {
+              var tx = db.transaction("settings", "readwrite");
+              var store = tx.objectStore("settings");
+              if (u) store.put({ key: "web-push-active-user", value: u });
+              else store.delete("web-push-active-user");
+              tx.oncomplete = tx.onerror = tx.onabort = function () { try { db.close(); } catch (_) {} resolve(); };
+            } catch (_) { try { db.close(); } catch (e) {} resolve(); }
+          };
+        } catch (_) { resolve(); }
+      });
+    }).catch(function () {});
+    return activeUserWrite;
+  }
+
   var FIREBASE_SDKS = [
     "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js",
     "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js",
@@ -144,7 +178,8 @@
 
   function register(force) {
     var user = currentUser();
-    if (!user) return Promise.resolve(null);
+    if (!user) { void setActivePushUser(""); return Promise.resolve(null); }
+    void setActivePushUser(user);
     if (window.CallMeAndroid) return Promise.resolve(null); // APK native handles its own token
     return ensureMessaging().then(function (messaging) {
       if (!messaging) return null;
@@ -178,6 +213,7 @@
   }
 
   function unregister() {
+    void setActivePushUser("");
     var last = readLast() || {};
     var user = state.user || currentUser() || last.peerId || "";
     var token = state.token || last.token || "";
@@ -185,12 +221,12 @@
       try { state.messaging.deleteToken(token).catch(function () {}); } catch (_) {}
     }
     state.token = "";
+    state.user = "";
     if (!user || !token) {
       writeLast("", "");
       return Promise.resolve(null);
     }
     return post("push-unregister", { peerId: user, webToken: token }).then(function (res) {
-      state.user = "";
       if (last.token === token) writeLast("", "");
       return res;
     });
@@ -201,8 +237,17 @@
   }
 
   // Re-register when session becomes active/changes.
-  window.addEventListener("callme:session-user", function () { void register(true); });
+  window.addEventListener("callme:session-user", function (e) {
+    var next = bare((e && e.detail && e.detail.user) || currentUser());
+    if (!next) {
+      state.user = "";
+      void setActivePushUser("");
+      return;
+    }
+    void register(true);
+  });
   document.addEventListener("DOMContentLoaded", function () {
+    void setActivePushUser(currentUser());
     setTimeout(function () { void register(false); }, 1200);
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) void register(false);

@@ -1,5 +1,5 @@
 /* CallMe service worker: push notifications + versioned app-shell caching. */
-const CACHE_VERSION = "callme-v6-2026-11-16-app";
+const CACHE_VERSION = "callme-v6-2026-11-16-pushfix";
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   "./",
@@ -72,19 +72,57 @@ self.addEventListener("fetch", (event) => {
   })());
 });
 
+function pushBare(value) {
+  return String(value || "").replace(/^cm-/i, "").trim().toLowerCase();
+}
+
+function getActivePushUser() {
+  return new Promise(function (resolve) {
+    try {
+      var req = indexedDB.open("callme-v2", 5);
+      req.onerror = req.onblocked = function () { resolve(""); };
+      req.onsuccess = function () {
+        var db = req.result;
+        try {
+          if (!db.objectStoreNames.contains("settings")) { db.close(); resolve(""); return; }
+          var tx = db.transaction("settings", "readonly");
+          var get = tx.objectStore("settings").get("web-push-active-user");
+          get.onsuccess = function () {
+            var row = get.result || null;
+            try { db.close(); } catch (_) {}
+            resolve(pushBare(row && row.value));
+          };
+          get.onerror = function () { try { db.close(); } catch (_) {} resolve(""); };
+        } catch (_) { try { db.close(); } catch (e) {} resolve(""); }
+      };
+    } catch (_) { resolve(""); }
+  });
+}
+
+function shouldDeliverPush(data, activeUser) {
+  var recipient = pushBare(data && (data.recipient || data.to));
+  // Tanpa pengguna aktif (logout), jangan tampilkan notif milik akun lain.
+  if (!activeUser) return false;
+  // Jika penerima diketahui, harus cocok dengan akun login aktif.
+  if (recipient && recipient !== activeUser) return false;
+  return true;
+}
+
 self.addEventListener("push", function (event) {
   var data = {};
   try { data = event.data ? event.data.json() : {}; } catch (_) {}
   data = data.data || data;
-  if (data.kind === "call-accepted" || data.kind === "call-declined") {
-    event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clients) {
-      clients.forEach(function (client) {
-        client.postMessage({ type: "callme:call-response", detail: { kind: data.kind, peerId: data.sender || data.title || "", callId: data.id || "" } });
+  event.waitUntil(getActivePushUser().then(function (activeUser) {
+    if (!shouldDeliverPush(data, activeUser)) return undefined;
+    if (data.kind === "call-accepted" || data.kind === "call-declined") {
+      return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clients) {
+        clients.forEach(function (client) {
+          client.postMessage({ type: "callme:call-response", detail: { kind: data.kind, peerId: data.sender || data.title || "", callId: data.id || "" } });
+        });
       });
-    }));
-    return;
-  }
-  event.waitUntil(showCallMeNotification(data));
+    }
+    return showCallMeNotification(data);
+  }));
 });
 
 function showCallMeNotification(data) {
