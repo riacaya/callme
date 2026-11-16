@@ -3,82 +3,205 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<meta name="theme-color" content="#082b49"/>
+<meta name="theme-color" content="#0b1f33"/>
 <meta name="description" content="CallMe - panggilan suara/video, chat, dan berbagi file privat peer-to-peer. Buka aplikasi web atau unduh APK Android dan shell Windows."/>
 <title>CallMe - Panggilan & Chat Privat</title>
 <style>
-  html, body { margin: 0; padding: 0; background: #edf3f8; color: #16324f; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 22px 20px; }
-  .head { display: flex; align-items: center; gap: 16px; padding: 14px 0 18px; border-bottom: 1px solid #c9d6e2; }
-  .logo { width: 72px; height: 72px; border-radius: 16px; }
-  h1 { margin: 0; font-size: clamp(26px,5vw,36px); color: #082b49; }
-  .sub { margin: 4px 0 0; color: #4a6278; font-size: 14px; }
-  .lead { margin: 18px 0 10px; font-size: 17px; line-height: 1.5; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 22px; }
-  .chip { font-size: 12px; padding: 5px 11px; border-radius: 999px; border: 1px solid #b9c9d8; background: #fff; }
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .card { border: 1px solid #c9d6e2; border-radius: 14px; background: #fff; overflow: hidden; }
-  .btn { display: flex; align-items: center; gap: 12px; padding: 15px 16px; min-height: 76px; box-sizing: border-box; text-decoration: none; color: #fff; font-weight: 700; }
-  .btn:hover { filter: brightness(0.92); }
-  .btn-web { background: #1672df; }
-  .btn-android { background: #2e7d32; }
-  .btn-windows { background: #5c6bc0; }
-  .btn-ico { font-size: 22px; line-height: 1; }
-  .btn-txt { display: flex; flex-direction: column; }
-  .btn-txt small { font-weight: 400; opacity: .9; font-size: 12px; }
-  .body { padding: 14px 16px 16px; border-top: 1px solid #e3ebf2; font-size: 13px; color: #4a6278; line-height: 1.55; }
+  :root {
+    --bg: #eef3f8;
+    --surface: #ffffff;
+    --ink: #10263f;
+    --muted: #5b7288;
+    --line: rgba(16, 38, 63, 0.10);
+    --navy: #0b1f33;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 500px at 10% -10%, rgba(22, 114, 223, 0.12), transparent 60%),
+      radial-gradient(900px 420px at 100% 0%, rgba(215, 181, 109, 0.10), transparent 55%),
+      linear-gradient(180deg, #f7f9fc 0%, var(--bg) 100%);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 36px 22px 28px; }
+  .hero {
+    position: relative;
+    padding: 28px 28px 24px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #0b1f33 0%, #143a5e 55%, #1a4d73 100%);
+    color: #f4f7fb;
+    box-shadow: 0 18px 50px rgba(11, 31, 51, 0.18);
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    right: -60px; top: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(215,181,109,0.22), transparent 70%);
+    pointer-events: none;
+  }
+  .head { display: flex; align-items: center; gap: 18px; position: relative; }
+  .logo {
+    width: 74px; height: 74px; border-radius: 18px;
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  }
+  .eyebrow {
+    margin: 0 0 4px;
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: rgba(244,247,251,0.7);
+    font-weight: 600;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 5vw, 40px);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .sub { margin: 4px 0 0; color: rgba(244,247,251,0.78); font-size: 14px; }
+  .lead {
+    margin: 18px 0 0;
+    max-width: 640px;
+    font-size: 17px;
+    line-height: 1.65;
+    color: rgba(244,247,251,0.92);
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+  .chip {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.08);
+    color: #f4f7fb;
+  }
+  .section {
+    margin-top: 22px;
+    padding: 20px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(255,255,255,0.8);
+    box-shadow: 0 10px 30px rgba(16, 38, 63, 0.06);
+  }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(16, 38, 63, 0.05);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(16, 38, 63, 0.10); }
+  .btn {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 16px;
+    min-height: 78px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 650;
+  }
+  .btn:hover { filter: brightness(0.94); }
+  .btn-web { background: linear-gradient(135deg, #1672df, #1f8fe5); }
+  .btn-android { background: linear-gradient(135deg, #2e7d32, #43a047); }
+  .btn-windows { background: linear-gradient(135deg, #5c6bc0, #7986cb); }
+  .btn-ico {
+    font-size: 22px; line-height: 1;
+    width: 38px; height: 38px;
+    display: grid; place-items: center;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.18);
+    flex: 0 0 38px;
+  }
+  .btn-txt { display: flex; flex-direction: column; gap: 2px; }
+  .btn-txt b { font-size: 15px; letter-spacing: -0.01em; }
+  .btn-txt small { font-weight: 400; opacity: .92; font-size: 12px; }
+  .body {
+    padding: 14px 16px 16px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
   .body ol { margin: 0; padding-left: 18px; }
-  .foot { margin-top: 22px; padding-top: 14px; border-top: 1px solid #c9d6e2; font-size: 12px; color: #5a7186; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } .logo { width: 60px; height: 60px; } }
+  .foot {
+    margin-top: 18px;
+    padding: 14px 4px 0;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .foot a { color: #1672df; text-decoration: none; font-weight: 600; }
+  .foot a:hover { text-decoration: underline; }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+    .wrap { padding: 22px 14px 20px; }
+    .hero { padding: 22px 18px 18px; }
+    .section { padding: 14px; }
+    .logo { width: 62px; height: 62px; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="head">
-    <img class="logo" src="assets/logo-192.png" alt="CallMe" width="72" height="72"/>
-    <div>
-      <h1>CallMe</h1>
-      <p class="sub">Private Call &middot; by RiaCaya</p>
+  <div class="hero">
+    <div class="head">
+      <img class="logo" src="assets/logo-192.png" alt="CallMe" width="74" height="74"/>
+      <div>
+        <p class="eyebrow">Private Communication</p>
+        <h1>CallMe</h1>
+        <p class="sub">Private Call &middot; by RiaCaya</p>
+      </div>
+    </div>
+
+    <p class="lead">Panggilan suara/video, pesan, dan berbagi file secara privat lewat koneksi peer-to-peer yang aman dan ringan.</p>
+    <div class="chips">
+      <span class="chip">Panggilan suara &amp; video</span>
+      <span class="chip">Chat &amp; lampiran</span>
+      <span class="chip">Peer-to-peer (WebRTC)</span>
+      <span class="chip">Notifikasi panggilan</span>
     </div>
   </div>
 
-  <p class="lead">Panggilan suara/video, pesan, dan berbagi file secara privat lewat koneksi peer-to-peer.</p>
-  <div class="chips">
-    <span class="chip">Panggilan suara &amp; video</span>
-    <span class="chip">Chat &amp; lampiran</span>
-    <span class="chip">Peer-to-peer (WebRTC)</span>
-    <span class="chip">Notifikasi panggilan</span>
-  </div>
+  <div class="section">
+    <div class="grid">
+      <div class="card">
+        <a class="btn btn-web" href="app/">
+          <span class="btn-ico">&#128172;</span>
+          <span class="btn-txt"><b>Buka CallMe Web</b><small>Jalankan di browser (PWA)</small></span>
+        </a>
+        <div class="body">Buka <b>app/</b> untuk masuk dan mulai chat/panggilan. Dapat dipasang ke layar utama dari browser yang mendukung.</div>
+      </div>
 
-  <div class="grid">
-    <div class="card">
-      <a class="btn btn-web" href="app/">
-        <span class="btn-ico">&#128172;</span>
-        <span class="btn-txt"><b>Buka CallMe Web</b><small>Jalankan di browser (PWA)</small></span>
-      </a>
-      <div class="body">Buka <b>app/</b> untuk masuk dan mulai chat/panggilan. Bisa dipasang ke layar utama dari browser yang mendukung.</div>
+      <div class="card">
+        <a class="btn btn-android" href="download/CallMe.apk">
+          <span class="btn-ico">&#128241;</span>
+          <span class="btn-txt"><b>Unduh untuk Android</b><small>APK (memuat UI terbaru dari web)</small></span>
+        </a>
+        <div class="body"><ol><li>Unduh &amp; pasang <b>CallMe.apk</b>.</li><li>Izinkan notifikasi, mikrofon/kamera, dan &quot;Full-screen intents&quot; agar panggilan masuk tampil penuh.</li></ol></div>
+      </div>
+
+      <div class="card">
+        <a class="btn btn-windows" href="download/CallMe-Windows-Shell.zip">
+          <span class="btn-ico">&#128421;</span>
+          <span class="btn-txt"><b>Unduh untuk Windows</b><small>Shell WebView2</small></span>
+        </a>
+        <div class="body"><ol><li>Unduh &amp; ekstrak paket.</li><li>Jalankan <b>setup.exe</b> (atau <b>CallMe.exe</b>) &mdash; memerlukan WebView2 Runtime.</li></ol></div>
+      </div>
     </div>
 
-    <div class="card">
-      <a class="btn btn-android" href="download/CallMe.apk">
-        <span class="btn-ico">&#128241;</span>
-        <span class="btn-txt"><b>Unduh untuk Android</b><small>APK (memuat UI terbaru dari web)</small></span>
-      </a>
-      <div class="body"><ol><li>Unduh &amp; pasang <b>CallMe.apk</b>.</li><li>Izinkan notifikasi, mikrofon/kamera, dan &quot;Full-screen intents&quot; agar panggilan masuk tampil penuh.</li></ol></div>
+    <div class="foot">
+      <span><b>CallMe</b> &middot; RiaCaya</span>
+      <span><a href="app/">Buka aplikasi</a></span>
     </div>
-
-    <div class="card">
-      <a class="btn btn-windows" href="download/CallMe-Windows-Shell.zip">
-        <span class="btn-ico">&#128421;</span>
-        <span class="btn-txt"><b>Unduh untuk Windows</b><small>Shell WebView2</small></span>
-      </a>
-      <div class="body"><ol><li>Unduh &amp; ekstrak paket.</li><li>Jalankan <b>setup.exe</b> (atau <b>CallMe.exe</b>) &mdash; memerlukan WebView2 Runtime.</li></ol></div>
-    </div>
-  </div>
-
-  <div class="foot">
-    <span><b>CallMe</b> &middot; RiaCaya</span>
-    <span><a href="app/">Buka aplikasi</a></span>
   </div>
 </div>
 <script>
