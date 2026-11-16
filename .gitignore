@@ -1,2 +1,5 @@
 # Abaikan installer lepas; gunakan yang ada di dalam CallMe-Windows-Shell.zip
 download/setup.exe
+
+# Backend (Apps Script) disimpan lokal di D:\CallMe\integrations\google-apps-script, jangan dipublikasikan ke Pages
+backend/
