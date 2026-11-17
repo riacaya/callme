@@ -343,7 +343,16 @@
         const icon = document.createElement("span");
         icon.setAttribute("aria-hidden", "true");
         icon.style.cssText = "display:grid;place-items:center;width:22px;height:22px;color:#64748b;font-size:22px;line-height:1";
-        icon.textContent = row.callType === "video" ? "▣" : "☎";
+        const iconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        iconSvg.setAttribute("viewBox", "0 -960 960 960");
+        iconSvg.setAttribute("width", "18");
+        iconSvg.setAttribute("height", "18");
+        iconSvg.setAttribute("fill", "currentColor");
+        iconSvg.setAttribute("aria-hidden", "true");
+        const iconPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        iconPath.setAttribute("d", row.callType === "video" ? window.CallMeIcons.paths.videocam : window.CallMeIcons.paths.phone);
+        iconSvg.append(iconPath);
+        icon.append(iconSvg);
         iconCircle.append(icon);
         const label = document.createElement("span");
         label.style.cssText = "display:flex;flex-direction:column;line-height:1.25;min-width:0";
