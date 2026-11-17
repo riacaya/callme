@@ -215,6 +215,7 @@
       if (session?.answerTimer) clearTimeout(session.answerTimer);
       if (session?.connectTimer) clearTimeout(session.connectTimer);
       if (session?.iceDisconnectTimer) clearTimeout(session.iceDisconnectTimer);
+      if (session?.pushWatchdog) clearTimeout(session.pushWatchdog);
       remoteReceived = false;
       const
         call = currentCall || pendingIncoming?.incoming,
@@ -532,6 +533,24 @@
           remote = mode === "video" ? view?.querySelector("#video-remote") : local,
           status = view?.querySelector('[id$="-call-status"]');
         if (!view || !local || !status) return;
+        if (incoming.__pushOnly) {
+          // Belum ada koneksi media: kirim call-accepted lewat relay; pemanggil
+          // lalu memulai panggilan P2P asli yang otomatis dijawab panel ini.
+          if (session?.pushWatchdog) clearTimeout(session.pushWatchdog);
+          setIncomingControls(view, false);
+          window.__callmeAutoAnswerPending = true;
+          status.textContent = "Menghubungkan...";
+          try { window.CallMeAndroid?.acceptCall?.(incoming.peer || incoming.peerId, session?.logId || incoming.metadata?.callLogId || ""); } catch (_) {}
+          try { window.CallMeAndroid?.answeredCall?.(); } catch (_) {}
+          const pushSession = session;
+          setTimeout(() => {
+            if (callSession === pushSession && !currentCall && !callEnded) {
+              window.CallMeAndroid?.cancelCall?.();
+              finish(false);
+            }
+          }, 45000);
+          return;
+        }
         // Setelah diterima, hanya tombol tutup merah yang tersisa dan tetap terpusat.
         setIncomingControls(view, false);
         window.CallMeApp.show(`${mode}-call`);
@@ -645,6 +664,29 @@
       window.CallMeAndroid?.declinedCall?.();
       finish(false);
     });
+    // Panggilan fallback push saat APK terlihat: tampilkan panel dering
+    // in-app menggantikan notifikasi sistem Jawab/Tolak. Bridge.pushCallShown
+    // mengonfirmasi ke native; tanpa konfirmasi (halaman versi lama), native
+    // tetap menampilkan notifikasi sebagai fallback.
+    window.addEventListener("callme:fcm-call-incoming", (event) => {
+      const detail = event.detail || {};
+      const peerId = detail.peerId || "";
+      if (!peerId || callSession) return;
+      try { window.CallMeAndroid?.pushCallShown?.(); } catch (_) {}
+      window.dispatchEvent(new CustomEvent("callme:incoming-call", {
+        detail: {
+          peer: peerId,
+          metadata: {
+            video: detail.video === true || detail.video === "true",
+            callLogId: detail.callId || "",
+          },
+          // Tanpa koneksi MediaConnection: jawaban dikirim lewat relay
+          // (Bridge.acceptCall), panggilan P2P asli menyusul lalu auto-jawab.
+          __pushOnly: true,
+          on: () => {},
+        },
+      }));
+    });
     window.addEventListener("callme:incoming-call", async (event) => {
       const incoming = event.detail;
       if (!incoming) return;
@@ -665,6 +707,16 @@
         logId: incoming.metadata?.callLogId || "",
         accepted: false,
       };
+      if (incoming.__pushOnly) {
+        // Pemanggil push-only menyerah sendiri (~30 dtk) tanpa memberi tahu
+        // penerima — akhiri dering panel sendiri bila tak dijawab/ditolak.
+        const sessionRef = callSession;
+        callSession.pushWatchdog = setTimeout(() => {
+          if (callSession !== sessionRef || sessionRef.accepted || sessionRef.rejected) return;
+          window.CallMeAndroid?.cancelCall?.();
+          finish(false);
+        }, 35000);
+      }
       void saveIncomingCallLog(incomingPeer, mode, callSession.logId).then((localLog) => {
         if (callSession?.peerId === incomingPeer)
           callSession.logId = localLog?.id || callSession.logId;
