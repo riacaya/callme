@@ -1,5 +1,5 @@
 /* CallMe service worker: push notifications + versioned app-shell caching. */
-const CACHE_VERSION = "callme-v6-2026-11-16-pushfix";
+const CACHE_VERSION = "callme-v6-2026-11-17-notify-focus";
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   "./",
@@ -99,12 +99,26 @@ function getActivePushUser() {
   });
 }
 
-function shouldDeliverPush(data, activeUser) {
+function hasFocusedClient(clients) {
+  for (var i = 0; i < clients.length; i++) {
+    var c = clients[i];
+    if (c && (c.focused || c.visibilityState === "visible")) return true;
+  }
+  return false;
+}
+
+function shouldDeliverPush(data, activeUser, clients) {
   var recipient = pushBare(data && (data.recipient || data.to));
   // Tanpa pengguna aktif (logout), jangan tampilkan notif milik akun lain.
   if (!activeUser) return false;
   // Jika penerima diketahui, harus cocok dengan akun login aktif.
   if (recipient && recipient !== activeUser) return false;
+  // Sinyal kontrol, bukan notifikasi pengguna.
+  if (data.kind === "call-accepted" || data.kind === "call-declined") return true;
+  // Pesan/media: app sudah di depan & terlihat → cukup in-app, hindari notif ganda.
+  if ((data.kind === "message" || data.kind === "media") && hasFocusedClient(clients || [])) return false;
+  // Panggilan: tetap tampilkan sebagai jaring pengaman (bangun/perhatian/aksi)
+  // meski ada klien, karena UI in-app belum tentu siap menangani.
   return true;
 }
 
@@ -112,14 +126,18 @@ self.addEventListener("push", function (event) {
   var data = {};
   try { data = event.data ? event.data.json() : {}; } catch (_) {}
   data = data.data || data;
-  event.waitUntil(getActivePushUser().then(function (activeUser) {
-    if (!shouldDeliverPush(data, activeUser)) return undefined;
+  event.waitUntil(Promise.all([
+    getActivePushUser(),
+    self.clients.matchAll({ type: "window", includeUncontrolled: true })
+  ]).then(function (res) {
+    var activeUser = res[0];
+    var clients = res[1] || [];
+    if (!shouldDeliverPush(data, activeUser, clients)) return undefined;
     if (data.kind === "call-accepted" || data.kind === "call-declined") {
-      return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clients) {
-        clients.forEach(function (client) {
-          client.postMessage({ type: "callme:call-response", detail: { kind: data.kind, peerId: data.sender || data.title || "", callId: data.id || "" } });
-        });
+      clients.forEach(function (client) {
+        client.postMessage({ type: "callme:call-response", detail: { kind: data.kind, peerId: data.sender || data.title || "", callId: data.id || "" } });
       });
+      return undefined;
     }
     return showCallMeNotification(data);
   }));
