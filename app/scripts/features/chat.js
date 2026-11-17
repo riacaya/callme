@@ -304,7 +304,54 @@
         osc.start(at);
         osc.stop(at + 0.13);
       } catch (error) {}
-    }
+    };
+    // Zoom lightbox: klik gambar/video di chatroom -> tampil fullscreen
+    // (zoom ke layar). Latar overlay solid gelap (#000), tanpa blur/backdrop.
+    const openMediaZoom = (source, kind, name) => {
+      document.getElementById("chat-media-zoom")?.remove();
+      const overlay = document.createElement("div");
+      overlay.id = "chat-media-zoom";
+      overlay.setAttribute("role", "dialog");
+      overlay.setAttribute("aria-modal", "true");
+      overlay.style.cssText =
+        "position:fixed;inset:0;z-index:60;background:#000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;";
+      const stage = document.createElement("div");
+      stage.style.cssText =
+        "display:flex;align-items:center;justify-content:center;width:100%;height:100%;max-width:100%;max-height:100%;";
+      const mediaEl = document.createElement(kind === "video" ? "video" : "img");
+      mediaEl.setAttribute("src", source);
+      if (kind === "video") {
+        mediaEl.setAttribute("autoplay", "");
+        mediaEl.setAttribute("playsinline", "");
+        mediaEl.controls = true;
+      }
+      mediaEl.alt = name || "";
+      mediaEl.style.cssText =
+        kind === "video"
+          ? "max-width:100%;max-height:100%;height:auto;width:auto;object-fit:contain;background:#000;display:block;"
+          : "max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;background:#000;display:block;";
+      stage.append(mediaEl);
+      const close = document.createElement("button");
+      close.type = "button";
+      close.setAttribute("aria-label", "Tutup");
+      close.textContent = "✕";
+      close.style.cssText =
+        "position:absolute;top:14px;right:14px;width:44px;height:44px;border-radius:50%;border:0;background:#222;color:#fff;font-size:22px;line-height:1;cursor:pointer;";
+      const closeZoom = () => {
+        window.removeEventListener("keydown", onKeyDown);
+        overlay.remove();
+      };
+      const onKeyDown = (event) => {
+        if (event.key === "Escape") closeZoom();
+      };
+      window.addEventListener("keydown", onKeyDown);
+      close.addEventListener("click", closeZoom);
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) closeZoom();
+      });
+      overlay.append(stage, close);
+      document.body.append(overlay);
+    };
     function render(row) {
       // Satu pesan hanya boleh punya satu bubble. Kirim ganda (ketukan/Enter
       // beruntun) atau pemuatan room yang beriringan tidak boleh menggandakan
@@ -409,7 +456,11 @@
           media.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            item.classList.toggle("media-expanded");
+            openMediaZoom(
+              mediaUrl,
+              media.tagName === "VIDEO" ? "video" : "image",
+              row.name,
+            );
           });
         }
         if (!row.mine && mediaUrl && media.tagName === "A") {
