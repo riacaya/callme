@@ -507,8 +507,10 @@
         finish(false);
       }));
     document.querySelectorAll("[data-call-accept]").forEach((button) => {
-      button.innerHTML = '<img src="https://api.iconify.design/material-symbols/call.svg?color=%23fff" alt="">';
-      button.querySelector("img").style.cssText = "width:28px;height:28px;display:block";
+      button.innerHTML = '<svg viewBox="0 -960 960 960" width="28" height="28" fill="#fff" aria-hidden="true"><use href="assets/callme-icons.svg#call"></use></svg>';
+    });
+    document.querySelectorAll("[data-call-reject]").forEach((button) => {
+      button.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="#fff" aria-hidden="true"><use href="assets/callme-icons.svg#call-end"></use></svg>';
     });
     document.querySelectorAll("[data-call-accept]").forEach((button) =>
       button.addEventListener("click", async () => {

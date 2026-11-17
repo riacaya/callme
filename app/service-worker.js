@@ -1,11 +1,12 @@
 /* CallMe service worker: push notifications + versioned app-shell caching. */
-const CACHE_VERSION = "callme-v7-2026-11-17-v16";
+const CACHE_VERSION = "callme-v7-2026-11-17-v17";
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./assets/logo-192.png",
+  "./assets/callme-icons.svg",
 ];
 
 self.addEventListener("install", (event) => {

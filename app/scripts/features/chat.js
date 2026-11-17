@@ -843,13 +843,14 @@
         "aria-label",
         text ? "Kirim" : recorder ? "Berhenti merekam" : "Rekam audio",
       );
-      const icon = submit.querySelector("img");
-      if (!icon) return;
-      icon.src = text
-        ? "https://api.iconify.design/material-symbols/send.svg?color=%23fff"
-        : recorder
-          ? "https://api.iconify.design/material-symbols/stop.svg?color=%23fff"
-          : "https://api.iconify.design/material-symbols/mic.svg?color=%23fff";
+      submit.querySelector("svg").setAttribute(
+        "href",
+        text
+          ? "assets/callme-icons.svg#send"
+          : recorder
+            ? "assets/callme-icons.svg#stop"
+            : "assets/callme-icons.svg#mic",
+      );
     }
     input.addEventListener("input", updateSubmit);
     updateSubmit();

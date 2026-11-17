@@ -9,14 +9,28 @@
       ["Ekspor Chat", "📦"], ["About", "ℹ️"], ["Log out", "↪️"],
     ]);
     panel.querySelectorAll("button").forEach((button) => {
+      // Tombol dengan <span class="setting-ico" data-ico="..."> memakai ikon
+      // SVG sprite (CallMeIcons); sisanya fallback emoji.
+      const existingIco = button.querySelector(".setting-icon, .setting-ico");
+      if (existingIco) return;
       const label = button.textContent.trim();
       const icon = [...icons].find(([text]) => label.includes(text))?.[1];
-      if (!icon || button.querySelector(".setting-icon") || /^[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF]/u.test(label)) return;
+      if (!icon || /^[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF]/u.test(label)) return;
       const mark = document.createElement("span");
       mark.className = "setting-icon";
       mark.textContent = icon;
       mark.setAttribute("aria-hidden", "true");
       button.prepend(mark, document.createTextNode(" "));
+    });
+
+    // Render ikon SVG pada tombol ber-`data-ico` (dari HTML grup pengaturan).
+    panel.querySelectorAll(".setting-ico[data-ico]").forEach((span) => {
+      const name = span.getAttribute("data-ico");
+      const iconFn = window.CallMeIcons && window.CallMeIcons[name];
+      if (typeof iconFn !== "function") return;
+      try {
+        span.appendChild(iconFn());
+      } catch (_) {}
     });
 
     const markTheme = (active) => panel.querySelectorAll("[data-theme]").forEach((button) => {
