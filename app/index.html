@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="application-name" content="CallMe">
   <meta name="theme-color" content="#082b49">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/logo-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/logo-192.png">
+  <link rel="apple-touch-icon" href="assets/logo-180.png">
   <title>CallMe</title><style>:root{--bg:#edf3f8;--head:#082b49;--chat:#e9f1f5;--panel:#fff;--ink:#16324f;--accent:#1672df;--soft:#eef2f6;--radius:18px;--panel-width:min(430px,100vw)}
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:16px Arial,sans-serif}
@@ -36,6 +39,9 @@ button{cursor:pointer;border:0}
 body[data-theme="lavender"]{--bg:#f1ecfa;--head:#5d438d;--chat:#f7f3fc;--panel:#fff;--ink:#302448;--accent:#8b5cf6;--soft:#e8def8}
 </style><style>.panel-login{display:grid;place-items:center;padding:16px}.panel-login .panel-card{width:min(390px,100%)}
 .about-logo{display:block;width:88px;height:88px;margin:8px auto 16px;object-fit:contain}.about-content{text-align:center}.about-content h2{margin:0 0 4px;font-weight:700}.about-content p{margin:6px 0}.about-content .about-version,.about-content .about-description{font-size:.85rem}.about-content .about-gap-after{margin-bottom:22px}
+.about-diagnostics{margin:0 0 18px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);border-radius:12px;background:var(--soft)}
+.about-diagnostics div{border-bottom:1px dashed color-mix(in srgb,var(--ink) 10%,transparent)}
+.about-diagnostics div:last-child{border-bottom:0}
 .connection-status{margin:0;padding:5px 14px;color:var(--muted);font-size:.75rem;text-align:center}
 .panel-login .panel-card h1{margin:0 0 4px;font-size:30px;text-align:center}.panel-login .panel-card>p{margin:0 0 20px;color:var(--muted);text-align:center}.panel-login .login-by{font-size:.68rem;line-height:1;margin:-25px 0 10px}.panel-login form{display:flex;flex-direction:column;gap:6px}.panel-login label{font-weight:700;font-size:.9rem}.panel-login input{width:100%;padding:11px;border:1px solid #9aa3ad;border-radius:8px;background:var(--panel);color:var(--ink)}.login-actions{display:flex;gap:8px;margin-top:8px}.panel-login form button{flex:1;padding:11px;border-radius:8px;background:var(--accent);color:#fff}.panel-login form button.secondary{background:var(--soft);color:var(--ink)}.panel-login #login-status{min-height:20px;margin-top:12px;font-size:.85rem;text-align:center}.brand-logo{display:block;width:72px;height:72px;margin:0 auto 12px;object-fit:contain}
 .panel-friends,.panel-settings,.panel-profile{display:flex;flex-direction:column}.panel-chatroom{display:flex;flex-direction:column;position:relative}.panel-call{position:absolute;inset:0;background:#050407;color:#fff;z-index:10}.app-header{justify-content:flex-start}.app-header .app-logo{width:40px;height:40px;object-fit:contain}.app-identity{display:flex;flex-direction:column;flex:1}.app-identity strong{font-size:18px}.app-identity small{font-size:11px}.app-header>button{width:40px;height:40px;background:transparent;color:inherit;font-size:22px}
@@ -417,7 +423,7 @@ audio.chat-media { width: min(100%, 360px); }
       <section data-panel="voice-call" class="panel panel-call hidden"><div class="voice-call-stage"><p id="voice-call-status">Siap memulai panggilan.</p><div class="voice-avatar" id="voice-avatar">👤</div><strong id="voice-call-name"></strong><audio id="voice-local" autoplay muted></audio><div class="call-controls"><button class="call-control call-control-accept" data-call-accept="voice" aria-label="Terima panggilan" hidden>☎</button><button class="call-control call-control-reject" data-call-reject="voice" aria-label="Tolak atau tutup panggilan">×</button></div></div></section>
       <section data-panel="video-call" class="panel panel-call hidden"><div class="video-call-stage"><video id="video-remote" autoplay playsinline></video><video id="video-local" autoplay muted playsinline></video><p id="video-call-status">Siap memulai panggilan.</p><strong id="video-call-name"></strong><div class="call-controls"><button class="call-control call-control-accept" data-call-accept="video" aria-label="Terima panggilan" hidden>☎</button><button class="call-control call-control-reject" data-call-reject="video" aria-label="Tolak atau tutup panggilan">×</button></div></div></section>
       <section data-panel="about" class="panel panel-about hidden">
-        <header class="panel-header"><button class="panel-back" data-back="friends" aria-label="Kembali">‹</button><h1>ⓘ About</h1></header><div class="panel-content about-content"><img class="about-logo" src="assets/logo.png" alt="Logo CallMe"><h2>CallMe</h2><p>Privat Call</p><p class="about-version about-gap-after">Versi 2</p><p class="about-description about-gap-after">Aplikasi komunikasi peer-to-peer.</p><p>Telp: +6282338013610</p><p>Email: riacaya99@gmail.com</p></div>
+        <header class="panel-header"><button class="panel-back" data-back="friends" aria-label="Kembali">‹</button><h1>ⓘ About</h1></header><div class="panel-content about-content"><img class="about-logo" src="assets/logo.png" alt="Logo CallMe"><h2>CallMe</h2><p>Privat Call</p><p class="about-version about-gap-after">Versi <span id="about-ui-version">…</span></p><div id="about-diagnostics" class="about-diagnostics" aria-live="polite"></div><p class="about-description about-gap-after">Aplikasi komunikasi peer-to-peer.</p><p>Telp: +6282338013610</p><p>Email: riacaya99@gmail.com</p></div>
       </section>
           <div id="main-menu-backdrop" class="main-menu-backdrop" aria-hidden="true"></div>
       <nav id="main-menu" class="main-menu panel panel-settings" aria-hidden="true" aria-label="Pengaturan">
@@ -494,6 +500,9 @@ audio.chat-media { width: min(100%, 360px); }
 </script>
   <script src="scripts/core/identity.js"></script><script src="scripts/core/profile-repository.js"></script><script src="scripts/core/install.js"></script>
   <script src="scripts/core/shell-bridge.js"></script>
+  <script src="scripts/core/app-version.js"></script>
+  <script src="scripts/core/error-report.js"></script>
+  <script src="scripts/core/update-toast.js"></script>
   <script src="push-config.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
@@ -516,6 +525,7 @@ audio.chat-media { width: min(100%, 360px); }
   
   
   <script src="scripts/features/settings.js"></script>
+  <script src="scripts/features/about.js"></script>
   <script src="scripts/features/chat-export.js"></script>
   <script src="scripts/i18n/locale-id.js"></script><script src="scripts/i18n/locale-en.js"></script>
   <script src="scripts/i18n/translator.js"></script>

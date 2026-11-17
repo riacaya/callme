@@ -58,6 +58,12 @@
       var data = event && event.data;
       if (!data) return;
       if (typeof data === "string") { try { data = JSON.parse(data); } catch (_) { return; } }
+      if (data.type === "shell-version") {
+        // Versi shell Windows (dikirim setelah navigasi selesai).
+        window.CallMeShellVersion = String(data.version || "");
+        try { window.CallMeAppVersion && window.CallMeAppVersion.check(); } catch (_) {}
+        return;
+      }
       if (data.type !== "call-action") return;
       var action = String(data.action || "");
       if (action === "accept") {
