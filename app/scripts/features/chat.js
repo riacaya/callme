@@ -844,12 +844,8 @@
         text ? "Kirim" : recorder ? "Berhenti merekam" : "Rekam audio",
       );
       submit.querySelector("svg").setAttribute(
-        "href",
-        text
-          ? "assets/callme-icons.svg#send"
-          : recorder
-            ? "assets/callme-icons.svg#stop"
-            : "assets/callme-icons.svg#mic",
+        "d",
+        window.CallMeIcons.paths[text ? "send" : recorder ? "stop" : "mic"] || "",
       );
     }
     input.addEventListener("input", updateSubmit);

@@ -507,10 +507,10 @@
         finish(false);
       }));
     document.querySelectorAll("[data-call-accept]").forEach((button) => {
-      button.innerHTML = '<svg viewBox="0 -960 960 960" width="28" height="28" fill="#fff" aria-hidden="true"><use href="assets/callme-icons.svg#phone"></use></svg>';
+      button.innerHTML = '<svg viewBox="0 -960 960 960" width="28" height="28" fill="#fff" aria-hidden="true"><path d="M795-120q-116 0-236.5-56T335-335Q232-438 176-558.5T120-795q0-19.29 12.86-32.14Q145.71-840 165-840h140q14 0 24 10t14 25l26.93 125.64Q372-665 369.5-653.5t-10.73 19.73L259-533q26 44 55 82t64 72q37 38 78 69.5t86 55.5l95-98q10-11 23.15-15 13.15-4 25.85-2l119 26q15 4 25 16.04 10 12.05 10 26.96v135q0 19.29-12.86 32.14Q814.29-120 795-120ZM229-588l81-82-23-110H180q2 42 13.5 88.5T229-588Zm369 363q41 19 89 31t93 14v-107l-103-21-79 83ZM229-588Zm369 363Z"/></svg>';
     });
     document.querySelectorAll("[data-call-reject]").forEach((button) => {
-      button.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="#fff" aria-hidden="true"><use href="assets/callme-icons.svg#call-end"></use></svg>';
+      button.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="#fff" aria-hidden="true"><path d="m136-306-94-94q-9-9-8.5-21t8.5-22q82-96 197-146.5T480-640q126 0 241 50.5T918-443q8 10 8.5 22t-8.5 21l-94 94q-8 8-23 9t-24-6l-114-85q-6-4.5-9-10.5t-3-13.5v-139q-42-16-85.5-22.5T480-580q-42 0-85.5 6.5T309-551v139q0 7.5-3 13.5t-9 10.5l-114.19 85.28q-11.81 8.72-24.5 7.8-12.68-.93-22.31-11.08Zm108-220q-38 19-73 45.5T104-424l57 59 83-61v-100Zm467-4v98l87 66 58-58q-32-33-68.5-58.5T711-530Zm-467 4Zm467-4Z"/></svg>';
     });
     document.querySelectorAll("[data-call-accept]").forEach((button) =>
       button.addEventListener("click", async () => {
