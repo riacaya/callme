@@ -507,7 +507,7 @@
         finish(false);
       }));
     document.querySelectorAll("[data-call-accept]").forEach((button) => {
-      button.innerHTML = '<svg viewBox="0 -960 960 960" width="28" height="28" fill="#fff" aria-hidden="true"><use href="assets/callme-icons.svg#call"></use></svg>';
+      button.innerHTML = '<svg viewBox="0 -960 960 960" width="28" height="28" fill="#fff" aria-hidden="true"><use href="assets/callme-icons.svg#phone"></use></svg>';
     });
     document.querySelectorAll("[data-call-reject]").forEach((button) => {
       button.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="#fff" aria-hidden="true"><use href="assets/callme-icons.svg#call-end"></use></svg>';
