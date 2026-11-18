@@ -383,6 +383,8 @@ video::-webkit-media-controls-panel { display:none !important; }
   .panel-settings, .panel-profile, .panel-location, .panel-about, .panel-language, .panel-theme {
     position: absolute;
     inset: 0 0 0 320px;
+    width: auto;
+    height: auto;
     z-index: 12;
   }
   /* --- Kolom profil teman (kanan) — muncul hanya saat chatroom terbuka --- */
@@ -505,7 +507,7 @@ video::-webkit-media-controls-panel { display:none !important; }
 .panel-admin .admin-user-name strong{font-size:13px}
 .panel-admin .admin-user-name small{color:var(--muted);font-size:11px}
 .panel-admin .admin-user-role{flex:none;color:var(--muted);font-size:11px}
-@media (min-width:900px){.panel-admin{position:absolute;inset:0 0 0 320px;z-index:12}}
+@media (min-width:900px){.panel-admin{position:absolute;inset:0 0 0 320px;width:auto;height:auto;z-index:12}}
 .export-chat-status{min-height:0;margin:0 0 6px;padding:0 10px;color:var(--ink);font-size:12px;line-height:1.35;text-align:center}.export-chat-status:empty{display:none}#export-chat-button:disabled{opacity:.6;cursor:wait}
 /* Desktop: layout ala Messenger — rail icon besar (kiri) + konten (teman/chat/profil).
    Layar HP (<900px) tetap pakai 1 kolom seperti sebelumnya. */
