@@ -68,7 +68,8 @@
           }
           if (COL2_PANELS.has(key)) {
             panel.classList.toggle("hidden", key !== activeCol2);
-          } else if (!FULLSCREEN_PANELS.has(key)) {
+          } else {
+            // Sembunyikan panel lain (termasuk fullscreen seperti login/call).
             panel.classList.add("hidden");
           }
         });
@@ -77,13 +78,12 @@
         panels.forEach((panel, key) => {
           if (key === "chatroom") {
             panel.classList.remove("hidden");
-          } else if (FULLSCREEN_PANELS.has(key)) {
-            panel.classList.add("hidden");
           } else if (COL2_PANELS.has(key)) {
             // Pertahankan/tampilkan panel aktif kolom 2 (agar daftar teman tidak hilang saat buka chat).
             if (!COL2_PANELS.has(activeCol2)) activeCol2 = "friends";
             panel.classList.toggle("hidden", key !== activeCol2);
           } else {
+            // Sembunyikan panel lain (termasuk fullscreen seperti login/call).
             panel.classList.add("hidden");
           }
         });
