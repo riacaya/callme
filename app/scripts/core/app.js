@@ -17,7 +17,35 @@
   }
 
   let lastMainPanel = "friends";
+
+  // Drawer pengaturan (#main-menu) bukan panel terdaftar; pastikan selalu
+  // tertutup saat berpindah panel agar tidak menumpuk di atas konten.
+  function settingsDrawer() {
+    return {
+      menu: document.getElementById("main-menu"),
+      backdrop: document.getElementById("main-menu-backdrop"),
+      btn: document.getElementById("main-menu-btn"),
+    };
+  }
+  function closeSettingsDrawer() {
+    const { menu, backdrop, btn } = settingsDrawer();
+    if (!menu?.classList.contains("open")) return;
+    menu.classList.remove("open");
+    backdrop?.classList.remove("open");
+    menu.setAttribute("aria-hidden", "true");
+    btn?.setAttribute("aria-expanded", "false");
+  }
+  function openSettingsDrawer() {
+    const { menu, backdrop, btn } = settingsDrawer();
+    if (!menu) return;
+    menu.classList.add("open");
+    backdrop?.classList.add("open");
+    menu.setAttribute("aria-hidden", "false");
+    btn?.setAttribute("aria-expanded", "true");
+  }
+
   function show(name) {
+    closeSettingsDrawer();
     if (!panels.has(name)) name = panels.has("friends") ? "friends" : [...panels.keys()][0];
     if (name === "friends" || name === "chatroom") lastMainPanel = name;
     // Catatan: kolom teman tetap terlihat saat chatroom terbuka di desktop
@@ -165,7 +193,13 @@
       if (railBtn && rail && rail.contains(railBtn)) {
         event.preventDefault();
         const panel = String(railBtn.getAttribute("data-rail-panel") || "friends");
-        if (typeof window.CallMeApp?.show === "function") window.CallMeApp.show(panel);
+        // Tidak ada panel "settings" terdaftar — buka drawer menu pengaturan.
+        if (panel === "settings") {
+          const { menu } = settingsDrawer();
+          menu?.classList.contains("open") ? closeSettingsDrawer() : openSettingsDrawer();
+        } else if (typeof window.CallMeApp?.show === "function") {
+          window.CallMeApp.show(panel);
+        }
         return;
       }
       const back = event.target.closest("[data-back]");
