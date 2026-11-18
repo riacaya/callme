@@ -961,7 +961,7 @@
         if (type === "remove") {
           if (!confirm("Hapus teman ini?")) return;
           await window.CallMeStorage?.remove?.("contacts", activeFriend.peerId);
-          window.CallMeApp.show("friends");
+          window.CallMeApp.show("friends", { closeChatroom: true });
           window.CallMeFriends?.load?.();
           return;
         }

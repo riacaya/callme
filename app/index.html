@@ -230,8 +230,8 @@ video::-webkit-media-controls-panel { display:none !important; }
     box-shadow: 0 18px 52px color-mix(in srgb, var(--ink) 13%, transparent);
   }
   #panel-outlet { position: relative; }
-  #panel-outlet:has(.panel-friends:not(.hidden))::before,
-  #panel-outlet:has(.panel-friends:not(.hidden))::after {
+  #panel-outlet:not(:has(.panel-login:not(.hidden))):not(:has(.panel-call:not(.hidden))):not(:has(.panel-chatroom:not(.hidden)))::before,
+  #panel-outlet:not(:has(.panel-login:not(.hidden))):not(:has(.panel-call:not(.hidden))):not(:has(.panel-chatroom:not(.hidden)))::after {
     content: "";
     position: absolute;
     z-index: 2;
@@ -239,7 +239,7 @@ video::-webkit-media-controls-panel { display:none !important; }
     transform: translateX(-50%);
     pointer-events: none;
   }
-  #panel-outlet:has(.panel-friends:not(.hidden))::before {
+  #panel-outlet:not(:has(.panel-login:not(.hidden))):not(:has(.panel-call:not(.hidden))):not(:has(.panel-chatroom:not(.hidden)))::before {
     top: 34%;
     width: 104px;
     height: 104px;
@@ -247,7 +247,7 @@ video::-webkit-media-controls-panel { display:none !important; }
     background: color-mix(in srgb, var(--panel) 78%, transparent) url("assets/logo-192.png") center / 76px 76px no-repeat;
     box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 10%, transparent);
   }
-  #panel-outlet:has(.panel-friends:not(.hidden))::after {
+  #panel-outlet:not(:has(.panel-login:not(.hidden))):not(:has(.panel-call:not(.hidden))):not(:has(.panel-chatroom:not(.hidden)))::after {
     top: calc(34% + 126px);
     width: min(420px, calc(100% - 360px));
     color: var(--ink);
@@ -258,13 +258,10 @@ video::-webkit-media-controls-panel { display:none !important; }
     content: "Selamat datang di CallMe\A Pilih teman untuk mulai percakapan";
     white-space: pre-line;
   }
-  html[lang="en"] #panel-outlet:has(.panel-friends:not(.hidden))::after {
+  html[lang="en"] #panel-outlet:not(:has(.panel-login:not(.hidden))):not(:has(.panel-call:not(.hidden))):not(:has(.panel-chatroom:not(.hidden)))::after {
     content: "Welcome to CallMe\A Select a friend to start chatting";
   }
-  #panel-outlet .panel-friends { display: flex !important; }
-  #panel-outlet:has(.panel-login:not(.hidden)) .panel-friends,
-  #panel-outlet:has(.panel-call:not(.hidden)) .panel-friends { display: none !important; }
-  #panel-outlet:has(.panel-friends:not(.hidden)) .panel-chatroom { display: none !important; }
+  /* Visibilitas friends/chatroom diatur oleh JS (desktop split: kolom 2 & 3 independen). */
   .panel-friends {
     position: absolute;
     inset: 0 auto 0 0;
@@ -380,12 +377,14 @@ video::-webkit-media-controls-panel { display:none !important; }
     inset: 0;
     z-index: 12;
   }
-  .panel-settings, .panel-profile, .panel-location, .panel-about, .panel-language, .panel-theme {
+  .panel[data-panel="profile"], .panel[data-panel="location"], .panel[data-panel="about"], .panel[data-panel="language"], .panel[data-panel="theme"] {
     position: absolute;
-    inset: 0 0 0 320px;
-    width: auto;
+    inset: 0 auto 0 0;
+    width: 320px;
     height: auto;
     z-index: 12;
+    border-right: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+    background: var(--panel);
   }
   /* --- Kolom profil teman (kanan) — muncul hanya saat chatroom terbuka --- */
   #panel-outlet:has(.panel-chatroom:not(.hidden)) .friend-profile-col {
@@ -507,7 +506,7 @@ video::-webkit-media-controls-panel { display:none !important; }
 .panel-admin .admin-user-name strong{font-size:13px}
 .panel-admin .admin-user-name small{color:var(--muted);font-size:11px}
 .panel-admin .admin-user-role{flex:none;color:var(--muted);font-size:11px}
-@media (min-width:900px){.panel-admin{position:absolute;inset:0 0 0 320px;width:auto;height:auto;z-index:12}}
+@media (min-width:900px){.panel-admin{position:absolute;inset:0 auto 0 0;width:320px;height:auto;z-index:12;border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);background:var(--panel)}}
 .export-chat-status{min-height:0;margin:0 0 6px;padding:0 10px;color:var(--ink);font-size:12px;line-height:1.35;text-align:center}.export-chat-status:empty{display:none}#export-chat-button:disabled{opacity:.6;cursor:wait}
 /* Desktop: layout ala Messenger — rail icon besar (kiri) + konten (teman/chat/profil).
    Layar HP (<900px) tetap pakai 1 kolom seperti sebelumnya. */

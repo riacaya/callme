@@ -109,7 +109,7 @@
       sessionStorage.setItem("callme-v2-session-user", localUser);
       sessionStorage.setItem("callme-v2-session-token", localToken);
       window.CallMeP2P?.start(localUser);
-      window.CallMeApp.show("friends");
+      window.CallMeApp.show("friends", { closeChatroom: true });
       return true;
     };
     const openLocalAccount = async (identity, secret) => {
@@ -121,7 +121,7 @@
       localStorage.setItem("callme-v2-session-token", "local-device-session");
       localStorage.setItem("callme-v2-user", identity);
       window.CallMeP2P?.start(identity);
-      window.CallMeApp.show("friends");
+      window.CallMeApp.show("friends", { closeChatroom: true });
       return true;
     };
     const refreshServerSession = async (identity, secret) => {
@@ -198,7 +198,7 @@
           window.CallMeP2P?.start(result.username || identity);
           password.value = "";
           setStatus("Membuka aplikasi...");
-          window.CallMeApp.show("friends");
+          window.CallMeApp.show("friends", { closeChatroom: true });
           return;
         }
         const key = `callme-local-account-${identity}`;
@@ -230,7 +230,7 @@
         window.CallMeP2P?.start(identity);
         password.value = "";
         setStatus("Membuka aplikasi...");
-        window.CallMeApp.show("friends");
+        window.CallMeApp.show("friends", { closeChatroom: true });
       } catch (error) {
         console.error(error);
         setStatus(error.name === "AbortError" ? "Server terlalu lama merespons. Coba lagi." : "Koneksi ke server gagal.");

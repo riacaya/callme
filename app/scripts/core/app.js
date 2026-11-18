@@ -44,26 +44,68 @@
     btn?.setAttribute("aria-expanded", "false");
   }
 
-  function show(name) {
+  const COL2_PANELS = new Set(["friends", "profile", "admin", "language", "theme", "about", "location"]);
+  const FULLSCREEN_PANELS = new Set(["login", "voice-call", "video-call"]);
+  const isDesktopSplit = () => window.matchMedia("(min-width:900px)").matches;
+
+  function show(name, opts) {
     closeSettingsDrawer();
     if (!panels.has(name)) name = panels.has("friends") ? "friends" : [...panels.keys()][0];
     if (name === "friends" || name === "chatroom") lastMainPanel = name;
-    // Catatan: kolom teman tetap terlihat saat chatroom terbuka di desktop
-    // dijaga oleh aturan CSS lama
-    // (#panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-friends).
-    // Jangan menahan class "hidden" friends di sini — aturan desktop lama
-    // #panel-outlet:has(.panel-friends:not(.hidden)) .panel-chatroom
-    // akan menyembunyikan chatroom dengan !important bila friends tidak
-    // memiliki class hidden.
-    panels.forEach((panel, key) => {
-      panel.classList.toggle("hidden", key !== name);
-    });
+    const desktop = isDesktopSplit();
+    const options = opts || {};
+
+    if (desktop && !FULLSCREEN_PANELS.has(name)) {
+      // Desktop split: kolom 2 (sidebar) dan kolom 3 (chatroom) dikelola terpisah.
+      if (COL2_PANELS.has(name)) {
+        // Ganti isi kolom 2; pertahankan chatroom kecuali diminta menutup.
+        panels.forEach((panel, key) => {
+          if (key === "chatroom") {
+            if (options.closeChatroom) panel.classList.add("hidden");
+            return; // jangan sentuh visibilitas chatroom
+          }
+          if (COL2_PANELS.has(key)) {
+            panel.classList.toggle("hidden", key !== name);
+          } else if (!FULLSCREEN_PANELS.has(key)) {
+            panel.classList.add("hidden");
+          }
+        });
+      } else if (name === "chatroom") {
+        // Buka/tampilkan chatroom di kolom 3; kolom 2 tetap apa adanya.
+        panels.forEach((panel, key) => {
+          if (key === "chatroom") {
+            panel.classList.remove("hidden");
+          } else if (FULLSCREEN_PANELS.has(key)) {
+            panel.classList.add("hidden");
+          }
+          // panel kolom 2 tidak diubah
+        });
+      } else {
+        // Panel lain: fallback perilaku tunggal.
+        panels.forEach((panel, key) => {
+          panel.classList.toggle("hidden", key !== name);
+        });
+      }
+    } else {
+      // Mobile / panel fullscreen: satu panel aktif.
+      panels.forEach((panel, key) => {
+        panel.classList.toggle("hidden", key !== name);
+      });
+    }
+
     window.dispatchEvent(
       new CustomEvent("callme:panel-change", { detail: { panel: name } }),
     );
   }
 
   function current() {
+    // Desktop split dapat menampilkan kolom 2 + chatroom sekaligus.
+    // Prioritaskan panel fullscreen/call, lalu chatroom, lalu lainnya.
+    const priority = ["voice-call", "video-call", "login", "chatroom"];
+    for (const name of priority) {
+      const p = panels.get(name);
+      if (p && !p.classList.contains("hidden")) return name;
+    }
     return (
       [...panels].find(
         ([, panel]) => !panel.classList.contains("hidden"),
@@ -257,8 +299,14 @@
         event.preventDefault();
         const fromPanel = back.closest("[data-panel]")?.dataset.panel;
         const target = back.dataset.back;
-        if (target === "friends" && ["profile", "admin", "about", "location"].includes(fromPanel || "")) {
-          show(lastMainPanel || "friends");
+        if (target === "friends" && fromPanel === "chatroom") {
+          // Kembali dari chatroom: tutup chatroom, tampilkan daftar teman.
+          show("friends", { closeChatroom: true });
+        } else if (target === "friends" && ["profile", "admin", "about", "location", "language", "theme"].includes(fromPanel || "")) {
+          // Kembali dari panel kolom 2: tampilkan daftar teman di kolom 2, chatroom tetap.
+          show("friends");
+        } else if (target === "chatroom") {
+          show("chatroom");
         } else {
           show(target);
         }
@@ -318,7 +366,7 @@
     if (user && token) {
       sessionStorage.setItem("callme-v2-session-user", user);
       sessionStorage.setItem("callme-v2-session-token", token);
-      show("friends");
+      show("friends", { closeChatroom: true });
       window.CallMeP2P?.start(user);
       const params = new URLSearchParams(window.location.search);
       if (params.has("cmOpenPeer")) {
