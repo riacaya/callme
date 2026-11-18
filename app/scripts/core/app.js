@@ -20,8 +20,15 @@
   function show(name) {
     if (!panels.has(name)) name = panels.has("friends") ? "friends" : [...panels.keys()][0];
     if (name === "friends" || name === "chatroom") lastMainPanel = name;
+    // Catatan: kolom teman tetap terlihat saat chatroom terbuka di desktop
+    // dijaga oleh aturan CSS lama
+    // (#panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-friends).
+    // Jangan menahan class "hidden" friends di sini — aturan desktop lama
+    // #panel-outlet:has(.panel-friends:not(.hidden)) .panel-chatroom
+    // akan menyembunyikan chatroom dengan !important bila friends tidak
+    // memiliki class hidden.
     panels.forEach((panel, key) => {
-      panel.classList.toggle("hidden", key !== name && !(name === "chatroom" && key === "friends"));
+      panel.classList.toggle("hidden", key !== name);
     });
     window.dispatchEvent(
       new CustomEvent("callme:panel-change", { detail: { panel: name } }),

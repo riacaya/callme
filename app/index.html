@@ -402,18 +402,17 @@ audio.chat-media { width: min(100%, 360px); }
 <style>
 /* Desktop: layout ala Messenger — rail icon besar (kiri) + konten (teman/chat/profil).
    Layar HP (<900px) tetap pakai 1 kolom seperti sebelumnya. */
+.app-rail{display:none}
 @media (min-width:900px){
   .app-shell{display:flex;flex-direction:row;width:100%;height:100dvh;margin:0 auto;overflow:hidden;position:relative;background:var(--chat)}
   #panel-outlet{flex:1;min-width:0;height:100dvh}
-  #panel-outlet{display:flex;flex-direction:row}
-  .panel{flex:1 1 0;min-width:0}
-  #panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-friends{flex:0 0 360px;min-width:280px}
-  .app-rail{position:absolute;left:0;top:0;bottom:0;width:92px;flex:0 0 auto;background:var(--panel);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:10px;z-index:40}
+  /* Rail ikut alur flex (bukan absolute) agar menempel di kiri tanpa
+     menimpa panel teman/chat yang posisinya absolute di dalam outlet. */
+  .app-rail{flex:0 0 92px;background:var(--panel);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:10px;z-index:1}
   .app-rail button{display:grid;place-items:center;width:56px;height:56px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--ink);cursor:pointer;flex:0 0 auto}
   .app-rail button:hover,.app-rail button:focus-visible{background:var(--soft)}
   .app-rail button svg{width:30px;height:30px;display:block}
 }
-.app-rail{display:none}
 </style>
 </head>
 <body>
