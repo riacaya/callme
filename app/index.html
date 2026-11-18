@@ -500,6 +500,9 @@ audio.chat-media { width: min(100%, 360px); }
   .app-rail .rail-head button:hover,.app-rail .rail-head button:focus-visible{background:color-mix(in srgb,#fff 16%,transparent)}
   .app-rail.rail-expanded .rail-head{width:calc(100% + 24px);margin-left:-12px;margin-right:-12px;justify-content:flex-start;padding:0 12px}
   .app-rail.rail-expanded .rail-head button{padding:0 14px;gap:14px}
+  /* Rail tidak tampil di layar login & saat panggilan (panggilan jadi penuh). */
+  .app-shell:has(.panel-login:not(.hidden)) .app-rail,
+  .app-shell:has(.panel-call:not(.hidden)) .app-rail{display:none}
   .app-rail .rail-label{display:none;font-size:14px;font-weight:650;letter-spacing:-.1px;white-space:nowrap;overflow:hidden}
   .app-rail .rail-sep{width:48px;height:1px;background:color-mix(in srgb,var(--ink) 14%,transparent);margin:6px 0;flex:0 0 auto}
   .app-rail .rail-sep.rail-bottom,.app-rail button.rail-bottom{margin-top:auto}
