@@ -531,6 +531,8 @@ video::-webkit-media-controls-panel { display:none !important; }
 @media (min-width:900px){
   .app-shell{display:flex;flex-direction:row;width:100%;height:100dvh;margin:0 auto;overflow:hidden;position:relative;background:var(--chat)}
   #panel-outlet{flex:1;min-width:0;height:100dvh}
+  /* Kontainer kolom utama dibuat siku (flush) di tampilan PC; elemen dalam tetap rounded. */
+  .app-rail,.panel-friends,.panel-chatroom,.panel-settings,.panel-profile,.panel-location,.panel-about,.panel-language,.panel-theme,.panel-admin{border-radius:0}
   /* Rail ikut alur flex (bukan absolute) agar menempel di kiri tanpa
      menimpa panel teman/chat yang posisinya absolute di dalam outlet. */
   .app-rail{flex:0 0 92px;background:var(--chat);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:6px;z-index:1;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;transition:flex-basis .18s ease}
