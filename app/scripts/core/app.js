@@ -333,6 +333,13 @@
         if (typeof window.CallMeApp?.show === "function") window.CallMeApp.show(panel);
         return;
       }
+      // Tutup overlay (desktop)
+      const overlayClose = event.target.closest("[data-overlay-close]");
+      if (overlayClose) {
+        event.preventDefault();
+        closeDesktopOverlays();
+        return;
+      }
       // Tutup overlay profil teman
       const fpClose = event.target.closest("[data-fp-close]");
       if (fpClose) {
