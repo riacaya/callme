@@ -408,10 +408,21 @@ audio.chat-media { width: min(100%, 360px); }
   #panel-outlet{flex:1;min-width:0;height:100dvh}
   /* Rail ikut alur flex (bukan absolute) agar menempel di kiri tanpa
      menimpa panel teman/chat yang posisinya absolute di dalam outlet. */
-  .app-rail{flex:0 0 92px;background:var(--panel);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:10px;z-index:1}
+  .app-rail{flex:0 0 92px;background:var(--panel);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:10px;z-index:1;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;transition:flex-basis .18s ease}
+  .app-rail::-webkit-scrollbar{display:none}
   .app-rail button{display:grid;place-items:center;width:56px;height:56px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--ink);cursor:pointer;flex:0 0 auto}
   .app-rail button:hover,.app-rail button:focus-visible{background:var(--soft)}
-  .app-rail button svg{width:30px;height:30px;display:block}
+  .app-rail button[hidden]{display:none!important}
+  .app-rail button svg{width:30px;height:30px;display:block;flex:0 0 auto}
+  .app-rail .rail-label{display:none;font-size:14px;font-weight:650;letter-spacing:-.1px;white-space:nowrap;overflow:hidden}
+  .app-rail .rail-sep{width:56px;height:1px;background:color-mix(in srgb,var(--ink) 14%,transparent);margin:6px 0;flex:0 0 auto}
+  .app-rail .rail-sep.rail-bottom,.app-rail button.rail-bottom{margin-top:auto}
+  /* Terluas: ☰ di atas menampilkan teks label di samping ikon (dorong konten). */
+  .app-rail.rail-expanded{flex:0 0 240px;align-items:stretch;padding:16px 12px;gap:6px}
+  .app-rail.rail-expanded button{width:100%;height:48px;display:flex;align-items:center;justify-content:flex-start;gap:14px;padding:0 14px;border-radius:12px}
+  .app-rail.rail-expanded button svg{width:24px;height:24px}
+  .app-rail.rail-expanded .rail-label{display:inline}
+  .app-rail.rail-expanded .rail-sep{width:100%}
 }
 </style>
 </head>
@@ -486,6 +497,8 @@ audio.chat-media { width: min(100%, 360px); }
         .main-menu-item:active,.main-menu-item:hover{background:var(--soft)}
         @media (min-width:900px){
           .main-menu{width:320px}
+          /* Desktop: tombol ☰ pindah ke puncak rail; header tanpa menu. */
+          .app-header #main-menu-btn{display:none!important}
         }
       </style>
       <script id="main-menu-script">

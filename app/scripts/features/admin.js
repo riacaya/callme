@@ -14,7 +14,7 @@
   const fallbackAvatar = () => window.CallMeChatUtils?.defaultAvatar || "assets/logo-192.png";
 
   document.addEventListener("DOMContentLoaded", () => {
-    const adminButton = document.querySelector('[data-open-panel="admin"]');
+    const adminButtons = document.querySelectorAll('[data-open-panel="admin"], [data-rail-panel="admin"]');
     const adminPanel = document.querySelector('[data-panel="admin"]');
     const turnButton = document.getElementById("admin-turn-test");
     const turnStatus = document.getElementById("admin-turn-status");
@@ -24,12 +24,14 @@
     const loadButton = document.getElementById("admin-load-users");
     const usersStatus = document.getElementById("admin-users-status");
     const usersList = document.getElementById("admin-users");
-    if (!adminButton || !adminPanel || !turnButton || !turnProgressBar || !loadButton || !usersList) return;
+    if (!adminButtons.length || !adminPanel || !turnButton || !turnProgressBar || !loadButton || !usersList) return;
 
     function updateAccess(user = currentUser()) {
       const allowed = isAdmin(user);
-      adminButton.hidden = !allowed;
-      adminButton.setAttribute("aria-hidden", String(!allowed));
+      adminButtons.forEach((button) => {
+        button.hidden = !allowed;
+        button.setAttribute("aria-hidden", String(!allowed));
+      });
       if (!allowed && !adminPanel.classList.contains("hidden")) window.CallMeApp?.show?.("friends");
     }
     updateAccess();

@@ -35,14 +35,6 @@
     menu.setAttribute("aria-hidden", "true");
     btn?.setAttribute("aria-expanded", "false");
   }
-  function openSettingsDrawer() {
-    const { menu, backdrop, btn } = settingsDrawer();
-    if (!menu) return;
-    menu.classList.add("open");
-    backdrop?.classList.add("open");
-    menu.setAttribute("aria-hidden", "false");
-    btn?.setAttribute("aria-expanded", "true");
-  }
 
   function show(name) {
     closeSettingsDrawer();
@@ -172,34 +164,85 @@
       .forEach((panel) => register(panel.dataset.panel, panel));
     const rail = document.getElementById("app-rail");
     if (rail) {
-      const railIcons = [
+      // Rail desktop ala Messenger: ikon saja, ☰ di atas untuk memperluas
+      // label. Aksi (bahasa/tema/ekspor/keluar) memakai ulang kontrol yang
+      // sudah ada di drawer menu (drawer tetap dipakai untuk layar HP).
+      const railDefs = [
+        { id: "rail-toggle", iconName: "menu", label: "Menu", action: "toggle" },
+        { sep: true },
         { id: "rail-chat", iconName: "chat", panel: "friends", label: "Chat" },
         { id: "rail-profile", iconName: "person", panel: "profile", label: "Profil" },
-        { id: "rail-settings", iconName: "admin-panel-settings", panel: "settings", label: "Pengaturan" },
+        { id: "rail-admin", iconName: "admin-panel-settings", panel: "admin", label: "Administrator", adminOnly: true },
+        { id: "rail-language", iconName: "language", action: "language", label: "Bahasa" },
+        { id: "rail-theme", iconName: "theme", action: "theme", label: "Tema" },
+        { id: "rail-export", iconName: "package", action: "export", label: "Ekspor Chat" },
+        { id: "rail-about", iconName: "info", panel: "about", label: "About" },
+        { sep: true, bottom: true },
+        { id: "rail-logout", iconName: "logout", action: "logout", label: "Log out", bottom: true },
       ];
-      for (const def of railIcons) {
+      for (const def of railDefs) {
+        if (def.sep) {
+          const sep = document.createElement("div");
+          sep.className = def.bottom ? "rail-sep rail-bottom" : "rail-sep";
+          rail.append(sep);
+          continue;
+        }
         const btn = document.createElement("button");
         btn.id = def.id;
         btn.type = "button";
-        btn.setAttribute("data-rail-panel", def.panel);
         btn.setAttribute("aria-label", def.label);
+        if (def.panel) btn.setAttribute("data-rail-panel", def.panel);
+        if (def.adminOnly) {
+          btn.hidden = true;
+          btn.setAttribute("aria-hidden", "true");
+        }
         const icon = window.CallMeIcons?.icon?.(def.iconName);
         if (icon) btn.append(icon);
+        const text = document.createElement("span");
+        text.className = "rail-label";
+        text.textContent = def.label;
+        btn.append(text);
+        if (def.bottom) btn.classList.add("rail-bottom");
+        if (def.action === "toggle") {
+          btn.setAttribute("aria-expanded", "false");
+          btn.addEventListener("click", () => {
+            const expanded = rail.classList.toggle("rail-expanded");
+            btn.setAttribute("aria-expanded", String(expanded));
+            try { localStorage.setItem("callme-v2-rail-expanded", expanded ? "1" : "0"); } catch { /* abaikan */ }
+          });
+        } else if (def.action === "language") {
+          btn.addEventListener("click", () => {
+            const next = document.documentElement.lang === "en" ? "id" : "en";
+            document.querySelector(`.language-option[data-language="${next}"]`)?.click();
+          });
+        } else if (def.action === "theme") {
+          btn.addEventListener("click", () => {
+            const options = [...document.querySelectorAll("#main-menu [data-theme]")];
+            if (!options.length) return;
+            const current = document.body.dataset.theme || "";
+            const index = options.findIndex((option) => option.dataset.theme === current);
+            options[(index + 1) % options.length].click();
+          });
+        } else if (def.action === "export") {
+          btn.addEventListener("click", () => document.getElementById("export-chat-button")?.click());
+        } else if (def.action === "logout") {
+          btn.addEventListener("click", () => document.querySelector("#main-menu [data-logout]")?.click());
+        }
         rail.append(btn);
       }
+      try {
+        if (localStorage.getItem("callme-v2-rail-expanded") === "1") {
+          rail.classList.add("rail-expanded");
+          document.getElementById("rail-toggle")?.setAttribute("aria-expanded", "true");
+        }
+      } catch { /* abaikan */ }
     }
     document.addEventListener("click", (event) => {
       const railBtn = event.target.closest("[data-rail-panel]");
       if (railBtn && rail && rail.contains(railBtn)) {
         event.preventDefault();
         const panel = String(railBtn.getAttribute("data-rail-panel") || "friends");
-        // Tidak ada panel "settings" terdaftar — buka drawer menu pengaturan.
-        if (panel === "settings") {
-          const { menu } = settingsDrawer();
-          menu?.classList.contains("open") ? closeSettingsDrawer() : openSettingsDrawer();
-        } else if (typeof window.CallMeApp?.show === "function") {
-          window.CallMeApp.show(panel);
-        }
+        if (typeof window.CallMeApp?.show === "function") window.CallMeApp.show(panel);
         return;
       }
       const back = event.target.closest("[data-back]");
