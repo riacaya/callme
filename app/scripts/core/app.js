@@ -172,7 +172,6 @@
         { id: "rail-chat", iconName: "chat", panel: "friends", label: "Chat" },
         { id: "rail-profile", iconName: "person", panel: "profile", label: "Profil" },
         { id: "rail-admin", iconName: "admin-panel-settings", panel: "admin", label: "Administrator", adminOnly: true },
-        { id: "rail-language", iconName: "language", action: "language", label: "Bahasa" },
         { id: "rail-theme", iconName: "theme", action: "theme", label: "Tema" },
         { id: "rail-export", iconName: "package", action: "export", label: "Ekspor Chat" },
         { id: "rail-about", iconName: "info", panel: "about", label: "About" },
@@ -208,11 +207,6 @@
             const expanded = rail.classList.toggle("rail-expanded");
             btn.setAttribute("aria-expanded", String(expanded));
             try { localStorage.setItem("callme-v2-rail-expanded", expanded ? "1" : "0"); } catch { /* abaikan */ }
-          });
-        } else if (def.action === "language") {
-          btn.addEventListener("click", () => {
-            const next = document.documentElement.lang === "en" ? "id" : "en";
-            document.querySelector(`.language-option[data-language="${next}"]`)?.click();
           });
         } else if (def.action === "theme") {
           btn.addEventListener("click", () => {
