@@ -789,6 +789,7 @@
     window.CallMeChat = {
       async open(friend) {
         activeFriend = friend || null;
+        window.CallMeFriendProfile?.render?.(friend);
         activeRoute = "";
         // Panel panggilan sedang tampil → room ini hanya dibuka sebagai panel
         // LATAR (activateCallRoom dipanggil saat terima/tolak). show("chatroom")

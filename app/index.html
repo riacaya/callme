@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/logo-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/logo-192.png">
   <link rel="apple-touch-icon" href="assets/logo-180.png">
-  <title>CallMe</title><style>:root{--bg:#edf3f8;--head:#082b49;--chat:#e9f1f5;--panel:#fff;--ink:#16324f;--accent:#1672df;--soft:#eef2f6;--radius:18px;--panel-width:min(430px,100vw)}
+  <title>CallMe</title><style>:root{--bg:#edf3f8;--head:#082b49;--chat:#e9f1f5;--panel:#fff;--ink:#16324f;--muted:color-mix(in srgb,var(--ink) 55%,transparent);--accent:#1672df;--soft:#eef2f6;--radius:18px;--panel-width:min(430px,100vw)}
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:16px Arial,sans-serif}
 body{box-sizing:border-box;padding:0;min-height:0;height:100dvh}.app-shell{height:100dvh;min-height:0;padding-bottom:0}
@@ -193,6 +193,8 @@ audio.chat-media { width: min(100%, 360px); }
 @keyframes loc-pulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.55)}70%{box-shadow:0 0 0 14px rgba(59,130,246,0)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
 </style><style>
 
+/* Kolom profil teman hanya untuk desktop; default disembunyikan. */
+.friend-profile-col { display: none; }
 @media (min-width: 900px) {
   :root { --panel-width: min(1280px, calc(100vw - 180px)); }
   html, body { background: var(--bg); font-family: Inter, "Segoe UI", Arial, sans-serif; font-size: 15px; }
@@ -247,8 +249,11 @@ audio.chat-media { width: min(100%, 360px); }
     border-right: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
     background: var(--panel);
   }
-  .panel-friends .app-header { padding: 12px 18px; }
-  .panel-friends .app-identity strong { font-size: 17px; letter-spacing: -.2px; }
+  .panel-friends .app-header { padding: 8px 18px; height: 56px; min-height: 56px; }
+  .panel-friends .app-identity strong { font-size: 16px; letter-spacing: -.2px; }
+  .app-identity small { font-size: 12px; }
+  .panel-header { height: 56px; min-height: 56px; align-items: center; }
+  .panel-header h1 { font-size: 16px; font-weight: 650; letter-spacing: -.15px; }
   .panel-friends .connection-status { padding: 9px 14px; background: var(--panel); font-size: 12px; }
   .panel-friends .panel-content { padding: 16px 14px; background: var(--panel); }
   .panel-friends #friend-search input { min-height: 44px; border-radius: 10px; background: var(--chat); font-size: 14px; }
@@ -348,6 +353,80 @@ audio.chat-media { width: min(100%, 360px); }
     inset: 0;
     z-index: 12;
   }
+  /* --- Kolom profil teman (kanan) — muncul hanya saat chatroom terbuka --- */
+  #panel-outlet:has(.panel-chatroom:not(.hidden)) .friend-profile-col {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 300px;
+    background: var(--panel);
+    border-left: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+    z-index: 3;
+  }
+  #panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-chatroom { right: 300px; }
+  #panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-chatroom .chat-item-media.media-expanded {
+    left: calc(50% + 10px);
+    width: min(calc(var(--panel-width) - 620px), 980px) !important;
+    max-width: min(calc(var(--panel-width) - 620px), 980px) !important;
+  }
+  .friend-profile-header { padding: 8px 18px; }
+  .friend-profile-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 26px 18px;
+    text-align: center;
+  }
+  .friend-profile-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--soft);
+    border: 3px solid var(--accent);
+  }
+  .friend-profile-name { margin-top: 10px; font-size: 17px; font-weight: 700; letter-spacing: -.2px; overflow-wrap: anywhere; }
+  .friend-profile-status { font-size: 13px; color: var(--muted); }
+  .friend-profile-status.is-online { color: var(--accent); font-weight: 700; }
+  .friend-profile-meta { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 16px; }
+  .friend-profile-meta > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent);
+    border-radius: 10px;
+    background: var(--soft);
+    font-size: 13px;
+    text-align: left;
+  }
+  .friend-profile-meta > div[hidden] { display: none; }
+  .friend-profile-meta span { color: var(--muted); flex: 0 0 auto; }
+  .friend-profile-meta b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .friend-profile-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 16px; }
+  .friend-profile-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px;
+    border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .friend-profile-actions button:hover {
+    background: var(--soft);
+    border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  }
 }
 @media (min-width: 900px) and (max-height: 650px) {
   .app-shell { height: 100dvh; min-height: 0; margin: 0 auto; }
@@ -408,19 +487,20 @@ audio.chat-media { width: min(100%, 360px); }
   #panel-outlet{flex:1;min-width:0;height:100dvh}
   /* Rail ikut alur flex (bukan absolute) agar menempel di kiri tanpa
      menimpa panel teman/chat yang posisinya absolute di dalam outlet. */
-  .app-rail{flex:0 0 92px;background:var(--panel);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:10px;z-index:1;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;transition:flex-basis .18s ease}
+  .app-rail{flex:0 0 92px;background:var(--panel);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:6px;z-index:1;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;transition:flex-basis .18s ease}
   .app-rail::-webkit-scrollbar{display:none}
-  .app-rail button{display:grid;place-items:center;width:56px;height:56px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--ink);cursor:pointer;flex:0 0 auto}
+  /* Ukuran tombol & ikon sama di kondisi terlipat maupun terbuka. */
+  .app-rail button{display:flex;align-items:center;justify-content:center;width:48px;height:48px;padding:0;border:0;border-radius:12px;background:transparent;color:var(--ink);cursor:pointer;flex:0 0 auto}
   .app-rail button:hover,.app-rail button:focus-visible{background:var(--soft)}
   .app-rail button[hidden]{display:none!important}
-  .app-rail button svg{width:30px;height:30px;display:block;flex:0 0 auto}
+  .app-rail button svg{width:26px;height:26px;display:block;flex:0 0 auto}
   .app-rail .rail-label{display:none;font-size:14px;font-weight:650;letter-spacing:-.1px;white-space:nowrap;overflow:hidden}
-  .app-rail .rail-sep{width:56px;height:1px;background:color-mix(in srgb,var(--ink) 14%,transparent);margin:6px 0;flex:0 0 auto}
+  .app-rail .rail-sep{width:48px;height:1px;background:color-mix(in srgb,var(--ink) 14%,transparent);margin:6px 0;flex:0 0 auto}
   .app-rail .rail-sep.rail-bottom,.app-rail button.rail-bottom{margin-top:auto}
   /* Terluas: ☰ di atas menampilkan teks label di samping ikon (dorong konten). */
   .app-rail.rail-expanded{flex:0 0 240px;align-items:stretch;padding:16px 12px;gap:6px}
   .app-rail.rail-expanded button{width:100%;height:48px;display:flex;align-items:center;justify-content:flex-start;gap:14px;padding:0 14px;border-radius:12px}
-  .app-rail.rail-expanded button svg{width:24px;height:24px}
+  .app-rail.rail-expanded button svg{width:26px;height:26px}
   .app-rail.rail-expanded .rail-label{display:inline}
   .app-rail.rail-expanded .rail-sep{width:100%}
 }
@@ -455,6 +535,23 @@ audio.chat-media { width: min(100%, 360px); }
         <div class="chat-menu" id="chat-menu" hidden><button type="button" data-chat-action="clear">🗑️<span>Clear Chat</span></button><button type="button" data-chat-action="remove">👤<span>Hapus Teman</span></button><button type="button" data-chat-action="block">🚫<span>Blokir</span></button></div>
         <p id="chat-activity-status" class="connection-status">Siap</p><div class="chat-messages" id="chat-messages"></div>
         <form class="chat-compose" id="chat-compose"><span class="attachment-wrap"><button id="attach-button" type="button" aria-label="Lampiran"><svg viewBox="0 -960 960 960" width="22" height="22" fill="#fff" aria-hidden="true"><path d="M450-450H230q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h220v-220q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v220h220q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H510v220q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37v-220Z"/></svg></button><span id="attachment-menu" class="attachment-menu" hidden><button type="button" data-pick="file">📁 File / Memory</button><button type="button" data-pick="photo">📷 Foto kamera</button><button type="button" data-pick="video">🎥 Video kamera</button><button type="button" data-pick="location">📍 Lokasi</button></span></span><input id="file-input" type="file" hidden><input id="photo-input" type="file" accept="image/*" capture="environment" hidden><input id="video-input" type="file" accept="video/*" capture="environment" hidden><input id="chat-text" placeholder="Ketik pesan..." autocomplete="off"><button id="chat-submit" type="submit" aria-label="Kirim"><svg viewBox="0 -960 960 960" width="20" height="20" fill="#fff" aria-hidden="true"><path d="M408-453.92q-29-30.91-29-75.08v-251q0-41.67 29.44-70.83Q437.88-880 479.94-880t71.56 29.17Q581-821.67 581-780v251q0 44.17-29 75.08Q523-423 480-423t-72-30.92ZM480-651Zm-30 501v-106q-96-11-166.5-77.5T202-498q-2-12.85 6.59-21.93 8.6-9.07 21.5-9.07 12.91 0 21.41 9t10.5 22q12 81 74.71 132.5Q399.42-314 479.65-314q81.35 0 143.85-51.5T698-498q2-13 10.68-22 8.67-9 21.5-9 12.82 0 21.32 9.07 8.5 9.08 6.5 21.93-4 30.21-14 59.1-10 28.9-28 53.9-8 10-19.94 11-11.93 1-22.06-7ZM461-586Zm2.94-294q42.06 0 71.56 29.46T565-779v226q0 15-9.32 22.5t-20.5 7.5q-11.18 0-20.68-7.94T505-554v-225q0-17.42-12-29.21T464-820q-17 0-29 11.79T423-779v83q0 15-9.32 22.5t-20.5 7.5q-11.18 0-20.68-7.68-9.5-7.69-9.5-22.32v-83q0-42.08 29.44-71.54Q421.88-880 463.94-880ZM434-150v-106q-96-11-166.5-77.5T186-498q-2-12.85 6.59-21.93 8.6-9.07 21.5-9.07 12.91 0 21.35 8.91 8.45 8.92 10.56 22.09 12 81 75 132.5T464.15-314q37.85 0 72.96-12.34Q572.22-338.67 601-361l43 43q-31 26-69.01 41.57Q536.97-260.86 494-256v106q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37v-106Zm378 76L55-831q-8-8-8-19t8-19q8-8 19-8t19 8l757 757q8 8 8 19t-8 19q-8 8-19 8t-19-8L501-334q-5 5-10.13 7-5.14 2-11 2-5.87 0-10.87-2Z"/></svg></button></form>
+      </section>
+      <section class="friend-profile-col" aria-label="Profil teman">
+        <header class="panel-header friend-profile-header"><h1>Profil Teman</h1></header>
+        <div class="friend-profile-body">
+          <img class="friend-profile-avatar" src="assets/logo-192.png" alt="">
+          <strong class="friend-profile-name">—</strong>
+          <span class="friend-profile-status">Offline</span>
+          <div class="friend-profile-meta">
+            <div class="friend-profile-phone-row"><span>Telepon</span><b class="friend-profile-phone">—</b></div>
+            <div class="friend-profile-bio-row" hidden><span>Bio</span><b class="friend-profile-bio">—</b></div>
+          </div>
+          <div class="friend-profile-actions">
+            <button type="button" data-fp-action="message">💬 Pesan</button>
+            <button type="button" data-fp-action="voice">📞 Panggilan suara</button>
+            <button type="button" data-fp-action="video">🎥 Panggilan video</button>
+          </div>
+        </div>
       </section>
       <section data-panel="location" class="panel panel-location hidden"><header class="panel-header"><button class="panel-back" data-back="chatroom" aria-label="Kembali">‹</button><h1>📍 Lokasi</h1></header><div class="panel-content"><div class="location-wrap"><div class="location-map" id="location-map"><p class="location-status" id="location-status">Mencari lokasi…</p></div><div class="location-stats"><span id="location-time">⏱ 0 detik</span><span id="location-accuracy">Akurasi ±… m</span><span id="location-distance">Jarak 0 m</span></div><p class="location-coords" id="location-coords">Menunggu GPS…</p><button type="button" class="setting-action location-send" id="location-send" disabled>📍 Kirim lokasi</button></div></div></section><section data-panel="admin" class="panel panel-admin hidden">
         <header class="panel-header"><button class="panel-back" data-back="friends" aria-label="Kembali">‹</button><h1>🛠 Administrator</h1></header>

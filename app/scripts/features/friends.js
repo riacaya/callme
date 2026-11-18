@@ -428,6 +428,45 @@
       }, 3000);
     });
     load();
+    // Kolom profil teman (kanan, desktop) — diisi setiap kali chat dibuka.
+    let profileFriend = null;
+    const renderFriendProfile = (friend) => {
+      profileFriend = friend || null;
+      const col = document.querySelector(".friend-profile-col");
+      if (!col) return;
+      const name = friend?.display_name || friend?.phone || friend?.peerId || "—";
+      const avatar = col.querySelector(".friend-profile-avatar");
+      if (avatar) {
+        avatar.src = friend?.profile_photo || window.CallMeChatUtils?.defaultAvatar || "assets/logo-192.png";
+        avatar.alt = name;
+      }
+      col.querySelector(".friend-profile-name").textContent = name;
+      const status = col.querySelector(".friend-profile-status");
+      const peerKey = String(friend?.peerId || "");
+      const statusSource = peerKey
+        ? document.querySelector(`.friend-item[data-peer-id="${CSS.escape(peerKey)}"] .friend-status`)
+        : null;
+      status.textContent = statusSource?.textContent || "Offline";
+      status.classList.toggle("is-online", /^Online\b/i.test(status.textContent));
+      const phoneRow = col.querySelector(".friend-profile-phone-row");
+      phoneRow.hidden = !friend?.phone;
+      col.querySelector(".friend-profile-phone").textContent = friend?.phone || "";
+      const bio = friend?.bio || friend?.about || "";
+      col.querySelector(".friend-profile-bio-row").hidden = !bio;
+      col.querySelector(".friend-profile-bio").textContent = bio;
+    };
+    window.CallMeFriendProfile = { render: renderFriendProfile };
+    document.querySelector(".friend-profile-col")?.addEventListener("click", (event) => {
+      const action = event.target.closest?.("[data-fp-action]")?.getAttribute("data-fp-action");
+      if (!action || !profileFriend) return;
+      if (action === "message") {
+        document.getElementById("chat-text")?.focus();
+        return;
+      }
+      if (action === "voice" || action === "video") {
+        document.querySelector(`.chat-action[data-call="${action}"]`)?.click();
+      }
+    });
     window.CallMeFriends = { load };
   });
 })();
