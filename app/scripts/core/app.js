@@ -21,7 +21,7 @@
     if (!panels.has(name)) name = panels.has("friends") ? "friends" : [...panels.keys()][0];
     if (name === "friends" || name === "chatroom") lastMainPanel = name;
     panels.forEach((panel, key) => {
-      panel.classList.toggle("hidden", key !== name);
+      panel.classList.toggle("hidden", key !== name && !(name === "chatroom" && key === "friends"));
     });
     window.dispatchEvent(
       new CustomEvent("callme:panel-change", { detail: { panel: name } }),
@@ -135,7 +135,32 @@
     document
       .querySelectorAll("[data-panel]")
       .forEach((panel) => register(panel.dataset.panel, panel));
+    const rail = document.getElementById("app-rail");
+    if (rail) {
+      const railIcons = [
+        { id: "rail-chat", iconName: "chat", panel: "friends", label: "Chat" },
+        { id: "rail-profile", iconName: "person", panel: "profile", label: "Profil" },
+        { id: "rail-settings", iconName: "admin-panel-settings", panel: "settings", label: "Pengaturan" },
+      ];
+      for (const def of railIcons) {
+        const btn = document.createElement("button");
+        btn.id = def.id;
+        btn.type = "button";
+        btn.setAttribute("data-rail-panel", def.panel);
+        btn.setAttribute("aria-label", def.label);
+        const icon = window.CallMeIcons?.icon?.(def.iconName);
+        if (icon) btn.append(icon);
+        rail.append(btn);
+      }
+    }
     document.addEventListener("click", (event) => {
+      const railBtn = event.target.closest("[data-rail-panel]");
+      if (railBtn && rail && rail.contains(railBtn)) {
+        event.preventDefault();
+        const panel = String(railBtn.getAttribute("data-rail-panel") || "friends");
+        if (typeof window.CallMeApp?.show === "function") window.CallMeApp.show(panel);
+        return;
+      }
       const back = event.target.closest("[data-back]");
       if (back) {
         event.preventDefault();
