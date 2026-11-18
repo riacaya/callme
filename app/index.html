@@ -37,7 +37,7 @@ button{cursor:pointer;border:0}
 .transfer-delivered{color:#1687e8!important;font-weight:600}
 .delivery-checks-blue{color:#1687e8!important;font-weight:700}
 body[data-theme="lavender"]{--bg:#f1ecfa;--head:#5d438d;--chat:#f7f3fc;--panel:#fff;--ink:#302448;--accent:#8b5cf6;--soft:#e8def8}
-</style><style>.panel-login{display:grid;place-items:center;padding:16px}.panel-login .panel-card{width:min(390px,100%)}
+.panel-login{display:grid;place-items:center;padding:16px}.panel-login .panel-card{width:min(390px,100%)}
 .about-logo{display:block;width:88px;height:88px;margin:8px auto 16px;object-fit:contain}.about-content{text-align:center}.about-content h2{margin:0 0 4px;font-weight:700}.about-content p{margin:6px 0}.about-content .about-version,.about-content .about-description{font-size:.85rem}.about-content .about-gap-after{margin-bottom:22px}
 .about-diagnostics{margin:0 0 18px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);border-radius:12px;background:var(--soft)}
 .about-diagnostics div{border-bottom:1px dashed color-mix(in srgb,var(--ink) 10%,transparent)}
@@ -132,7 +132,7 @@ audio.chat-media { width: min(100%, 360px); }
 .panel-chatroom .chat-item-media.media-expanded{position:fixed;z-index:30;left:50%;top:0;bottom:0;width:var(--panel-width)!important;max-width:var(--panel-width)!important;height:100dvh;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;padding:0;background:#000;border-radius:0}.panel-chatroom .chat-item-media.media-expanded .chat-media{width:100%;max-width:100%;height:auto;max-height:100%;object-fit:contain}.panel-chatroom .chat-item-media.media-expanded .chat-media-title,.panel-chatroom .chat-item-media.media-expanded .chat-item-more,.panel-chatroom .chat-item-media.media-expanded .chat-meta,.panel-chatroom .chat-item-media.media-expanded .chat-file-info{display:none}
 .panel-chatroom .chat-item:not(.chat-item-media) .chat-item-more{background:transparent;color:#fff;text-shadow:0 1px 3px #0008}
 .panel-chatroom .chat-item:not(.chat-item-media) .chat-bubble::after{color:#fff!important;text-shadow:0 1px 3px #0008}
-</style><style>.panel-call { background:#071b2b; color:#fff; }
+.panel-call { background:#071b2b; color:#fff; }
 .voice-call-stage,.video-call-stage { position:relative; display:flex; min-height:100%; align-items:center; justify-content:center; flex-direction:column; gap:1rem; }
 #video-remote { width:100%; height:100%; object-fit:cover; background:#000; }
 #video-local { position:absolute; right:1rem; bottom:1rem; width:28%; max-height:32%; object-fit:cover; border-radius:1rem; background:#000; }
@@ -162,12 +162,9 @@ video::-webkit-media-controls-panel { display:none !important; }
 .panel-chatroom .chat-item-media:has(>img.chat-media),
 .panel-chatroom .chat-item-media:has(>video.chat-media){background:var(--head);color:#fff;border-radius:14px}
 .panel-chatroom .chat-item-media.media-expanded{width:var(--panel-width)!important;max-width:var(--panel-width)!important}
-</style>
-<style>
+
 .panel-chatroom .chat-item-media:has(>audio.chat-media) .chat-meta{position:static;display:block;margin:6px 2px 0;text-align:right;color:#fff}
-</style>
-<style></style>
-<style id="chat-width-fix">
+
 .panel-chatroom .chat-messages .chat-item,
 .panel-chatroom .chat-messages .chat-item.chat-item-media,
 .panel-chatroom .chat-messages .chat-item.call-log-item,
@@ -181,8 +178,7 @@ video::-webkit-media-controls-panel { display:none !important; }
 .panel-chatroom .chat-messages .chat-item .chat-bubble{width:100%!important;max-width:100%!important;box-sizing:border-box!important}
 .panel-chatroom .chat-messages .chat-item-media .chat-media{max-width:100%!important}
 .panel-chatroom .chat-messages .chat-item-media.media-expanded{width:var(--panel-width)!important;max-width:var(--panel-width)!important}
-</style>
-<style>
+
 .panel-location{display:flex;flex-direction:column}
 .panel-location .panel-content{padding:10px 12px;font-size:14px}
 .location-wrap{width:min(100%,calc((100vh - 190px)*9/16));width:min(100%,calc((100dvh - 190px)*9/16));margin:0 auto}
@@ -195,7 +191,7 @@ video::-webkit-media-controls-panel { display:none !important; }
 .location-send:disabled{opacity:.5}
 .location-marker-pulse{width:16px;height:16px;border-radius:50%;background:#3b82f6;border:2px solid #fff;animation:loc-pulse 1.6s ease-out infinite}
 @keyframes loc-pulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.55)}70%{box-shadow:0 0 0 14px rgba(59,130,246,0)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
-</style><style>
+
 
 /* Kolom profil teman hanya untuk desktop; default disembunyikan. */
 .friend-profile-col { display: none; }
@@ -466,8 +462,7 @@ video::-webkit-media-controls-panel { display:none !important; }
   .app-shell { height: 100dvh; min-height: 0; margin: 0 auto; }
 }
 
-</style>
-<style>
+
 #chat-menu.chat-menu{align-items:flex-end}
 #chat-menu.chat-menu button{flex-direction:row-reverse;justify-content:space-between;width:160px;min-width:160px;padding:4px 8px;text-align:right;font-size:14px}
 #chat-menu.chat-menu button span{font-size:14px}
@@ -475,8 +470,7 @@ video::-webkit-media-controls-panel { display:none !important; }
 #attachment-menu.attachment-menu{position:absolute;left:0;right:0;bottom:calc(100% + 8px);width:auto;min-width:0;transform:none;align-items:stretch;gap:2px;padding:12px;background:var(--panel);box-shadow:0 4px 16px #0003;border-radius:0}
 #attachment-menu.attachment-menu button{width:100%;padding:7px 8px;text-align:left;font-size:14px;line-height:1.35}
 
-</style>
-<style>
+
 .panel-admin{display:flex;flex-direction:column}
 .panel-settings .admin-only[hidden]{display:none!important}
 .panel-admin .panel-content{padding:12px}
@@ -510,9 +504,7 @@ video::-webkit-media-controls-panel { display:none !important; }
 .panel-admin .admin-user-name small{color:var(--muted);font-size:11px}
 .panel-admin .admin-user-role{flex:none;color:var(--muted);font-size:11px}
 @media (min-width:900px){.panel-admin{position:absolute;inset:0;z-index:12}}
-</style>
-<style>.export-chat-status{min-height:0;margin:0 0 6px;padding:0 10px;color:var(--ink);font-size:12px;line-height:1.35;text-align:center}.export-chat-status:empty{display:none}#export-chat-button:disabled{opacity:.6;cursor:wait}</style>
-<style>
+.export-chat-status{min-height:0;margin:0 0 6px;padding:0 10px;color:var(--ink);font-size:12px;line-height:1.35;text-align:center}.export-chat-status:empty{display:none}#export-chat-button:disabled{opacity:.6;cursor:wait}
 /* Desktop: layout ala Messenger — rail icon besar (kiri) + konten (teman/chat/profil).
    Layar HP (<900px) tetap pakai 1 kolom seperti sebelumnya. */
 .app-rail{display:none}
