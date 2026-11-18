@@ -47,6 +47,7 @@
   const COL2_PANELS = new Set(["friends", "profile", "admin", "language", "theme", "about", "location"]);
   const FULLSCREEN_PANELS = new Set(["login", "voice-call", "video-call"]);
   const isDesktopSplit = () => window.matchMedia("(min-width:900px)").matches;
+  let activeCol2 = "friends"; // panel aktif di kolom 2 (desktop split)
 
   function show(name, opts) {
     closeSettingsDrawer();
@@ -58,27 +59,33 @@
     if (desktop && !FULLSCREEN_PANELS.has(name)) {
       // Desktop split: kolom 2 (sidebar) dan kolom 3 (chatroom) dikelola terpisah.
       if (COL2_PANELS.has(name)) {
+        activeCol2 = name;
         // Ganti isi kolom 2; pertahankan chatroom kecuali diminta menutup.
         panels.forEach((panel, key) => {
           if (key === "chatroom") {
             if (options.closeChatroom) panel.classList.add("hidden");
-            return; // jangan sentuh visibilitas chatroom
+            return;
           }
           if (COL2_PANELS.has(key)) {
-            panel.classList.toggle("hidden", key !== name);
+            panel.classList.toggle("hidden", key !== activeCol2);
           } else if (!FULLSCREEN_PANELS.has(key)) {
             panel.classList.add("hidden");
           }
         });
       } else if (name === "chatroom") {
-        // Buka/tampilkan chatroom di kolom 3; kolom 2 tetap apa adanya.
+        // Buka chatroom di kolom 3; pastikan kolom 2 tetap menampilkan panel aktifnya (mis. daftar teman).
         panels.forEach((panel, key) => {
           if (key === "chatroom") {
             panel.classList.remove("hidden");
           } else if (FULLSCREEN_PANELS.has(key)) {
             panel.classList.add("hidden");
+          } else if (COL2_PANELS.has(key)) {
+            // Pertahankan/tampilkan panel aktif kolom 2 (agar daftar teman tidak hilang saat buka chat).
+            if (!COL2_PANELS.has(activeCol2)) activeCol2 = "friends";
+            panel.classList.toggle("hidden", key !== activeCol2);
+          } else {
+            panel.classList.add("hidden");
           }
-          // panel kolom 2 tidak diubah
         });
       } else {
         // Panel lain: fallback perilaku tunggal.
