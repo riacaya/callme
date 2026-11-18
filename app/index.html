@@ -195,12 +195,14 @@ video::-webkit-media-controls-panel { display:none !important; }
   .friend-profile-col.overlay-open {
     display: flex;
     flex-direction: column;
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
+    right: auto;
+    bottom: auto;
     transform: translate(-50%, -50%);
-    width: min(420px, calc(100% - 64px));
-    max-height: calc(100% - 64px);
+    width: min(420px, calc(100vw - 64px));
+    max-height: calc(100dvh - 64px);
     z-index: 40;
     border-radius: 12px;
     border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
@@ -417,14 +419,15 @@ video::-webkit-media-controls-panel { display:none !important; }
   .panel.overlay-open[data-panel="theme"],
   .panel.overlay-open[data-panel="admin"] {
     display: flex !important;
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
+    right: auto;
+    bottom: auto;
     transform: translate(-50%, -50%);
-    width: min(560px, calc(100% - 64px));
+    width: min(560px, calc(100vw - 64px));
     height: auto;
-    max-height: calc(100% - 64px);
-    inset: auto;
+    max-height: calc(100dvh - 64px);
     z-index: 40;
     border-radius: 12px;
     border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
