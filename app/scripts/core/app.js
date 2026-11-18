@@ -169,7 +169,6 @@
       // sudah ada di drawer menu (drawer tetap dipakai untuk layar HP).
       const railDefs = [
         { id: "rail-toggle", iconName: "menu", label: "Menu", action: "toggle" },
-        { sep: true },
         { id: "rail-chat", iconName: "chat", panel: "friends", label: "Chat" },
         { id: "rail-profile", iconName: "person", panel: "profile", label: "Profil" },
         { id: "rail-admin", iconName: "admin-panel-settings", panel: "admin", label: "Administrator", adminOnly: true },
@@ -228,7 +227,15 @@
         } else if (def.action === "logout") {
           btn.addEventListener("click", () => document.querySelector("#main-menu [data-logout]")?.click());
         }
-        rail.append(btn);
+        if (def.action === "toggle") {
+          // ☰ dibungkus blok header gelap setinggi header kolom lain (56px).
+          const head = document.createElement("div");
+          head.className = "rail-head";
+          head.append(btn);
+          rail.append(head);
+        } else {
+          rail.append(btn);
+        }
       }
       try {
         if (localStorage.getItem("callme-v2-rail-expanded") === "1") {

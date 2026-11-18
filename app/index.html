@@ -197,7 +197,7 @@ audio.chat-media { width: min(100%, 360px); }
 .friend-profile-col { display: none; }
 @media (min-width: 900px) {
   :root { --panel-width: min(1280px, calc(100vw - 180px)); }
-  html, body { background: var(--bg); font-family: Inter, "Segoe UI", Arial, sans-serif; font-size: 15px; }
+  html, body { background: var(--chat); font-family: Inter, "Segoe UI", Arial, sans-serif; font-size: 15px; }
   button, input, textarea { font-family: inherit; }
   .app-shell {
     width: var(--panel-width);
@@ -494,6 +494,12 @@ audio.chat-media { width: min(100%, 360px); }
   .app-rail button:hover,.app-rail button:focus-visible{background:var(--soft)}
   .app-rail button[hidden]{display:none!important}
   .app-rail button svg{width:26px;height:26px;display:block;flex:0 0 auto}
+  /* Blok header gelap di puncak rail — tinggi 56px, sejajar dengan header kolom lain. */
+  .app-rail .rail-head{display:flex;align-items:center;justify-content:center;width:100%;height:56px;flex:0 0 auto;margin-top:-16px;margin-bottom:8px;background:var(--head);color:#fff}
+  .app-rail .rail-head button{color:#fff}
+  .app-rail .rail-head button:hover,.app-rail .rail-head button:focus-visible{background:color-mix(in srgb,#fff 16%,transparent)}
+  .app-rail.rail-expanded .rail-head{width:calc(100% + 24px);margin-left:-12px;margin-right:-12px;justify-content:flex-start;padding:0 12px}
+  .app-rail.rail-expanded .rail-head button{padding:0 14px;gap:14px}
   .app-rail .rail-label{display:none;font-size:14px;font-weight:650;letter-spacing:-.1px;white-space:nowrap;overflow:hidden}
   .app-rail .rail-sep{width:48px;height:1px;background:color-mix(in srgb,var(--ink) 14%,transparent);margin:6px 0;flex:0 0 auto}
   .app-rail .rail-sep.rail-bottom,.app-rail button.rail-bottom{margin-top:auto}
