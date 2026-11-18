@@ -33,7 +33,7 @@
       } catch (_) {}
     });
 
-    const markTheme = (active) => panel.querySelectorAll("[data-theme]").forEach((button) => {
+    const markTheme = (active) => document.querySelectorAll("[data-theme]").forEach((button) => {
       let mark = button.querySelector(".theme-check");
       if (!mark) {
         mark = document.createElement("span");
@@ -43,7 +43,7 @@
       }
       mark.hidden = button.dataset.theme !== active;
     });
-    panel.querySelectorAll("[data-theme]").forEach((button) => {
+    document.querySelectorAll("[data-theme]").forEach((button) => {
       button.addEventListener("click", () => {
         document.body.dataset.theme = button.dataset.theme;
         localStorage.setItem("callme-v2-theme", button.dataset.theme);

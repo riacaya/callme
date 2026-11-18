@@ -172,7 +172,8 @@
         { id: "rail-chat", iconName: "chat", panel: "friends", label: "Chat" },
         { id: "rail-profile", iconName: "person", panel: "profile", label: "Profil" },
         { id: "rail-admin", iconName: "admin-panel-settings", panel: "admin", label: "Administrator", adminOnly: true },
-        { id: "rail-theme", iconName: "theme", action: "theme", label: "Tema" },
+        { id: "rail-language", iconName: "language", panel: "language", label: "Bahasa" },
+        { id: "rail-theme", iconName: "theme", panel: "theme", label: "Tema" },
         { id: "rail-export", iconName: "package", action: "export", label: "Ekspor Chat" },
         { id: "rail-about", iconName: "info", panel: "about", label: "About" },
         { sep: true, bottom: true },
@@ -207,14 +208,6 @@
             const expanded = rail.classList.toggle("rail-expanded");
             btn.setAttribute("aria-expanded", String(expanded));
             try { localStorage.setItem("callme-v2-rail-expanded", expanded ? "1" : "0"); } catch { /* abaikan */ }
-          });
-        } else if (def.action === "theme") {
-          btn.addEventListener("click", () => {
-            const options = [...document.querySelectorAll("#main-menu [data-theme]")];
-            if (!options.length) return;
-            const current = document.body.dataset.theme || "";
-            const index = options.findIndex((option) => option.dataset.theme === current);
-            options[(index + 1) % options.length].click();
           });
         } else if (def.action === "export") {
           btn.addEventListener("click", () => document.getElementById("export-chat-button")?.click());
