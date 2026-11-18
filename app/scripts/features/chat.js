@@ -41,6 +41,13 @@
     avatar.src = window.CallMeChatUtils.defaultAvatar;
     avatar.alt = "";
     title.before(avatar);
+    const openFriendProfileMobile = () => {
+      if (window.matchMedia("(max-width:899px)").matches) {
+        document.querySelector(".friend-profile-col")?.classList.add("mobile-open");
+      }
+    };
+    avatar.addEventListener("click", openFriendProfileMobile);
+    title.addEventListener("click", openFriendProfileMobile);
     const updateAvatar = () => {
       if (activeFriend)
         avatar.src =
@@ -789,6 +796,7 @@
     window.CallMeChat = {
       async open(friend) {
         activeFriend = friend || null;
+        document.querySelector(".friend-profile-col")?.classList.remove("mobile-open");
         window.CallMeFriendProfile?.render?.(friend);
         activeRoute = "";
         // Panel panggilan sedang tampil → room ini hanya dibuka sebagai panel

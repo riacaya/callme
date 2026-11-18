@@ -28,6 +28,7 @@
     };
   }
   function closeSettingsDrawer() {
+    document.querySelector(".friend-profile-col")?.classList.remove("mobile-open");
     const { menu, backdrop, btn } = settingsDrawer();
     const rail = document.getElementById("app-rail");
     if (rail?.classList.contains("mobile-open")) {

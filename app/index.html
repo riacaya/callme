@@ -195,6 +195,32 @@ audio.chat-media { width: min(100%, 360px); }
 
 /* Kolom profil teman hanya untuk desktop; default disembunyikan. */
 .friend-profile-col { display: none; }
+.friend-profile-back { display: none; }
+@media (max-width:899px) {
+  .friend-profile-col.mobile-open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: var(--panel);
+  }
+  .friend-profile-col.mobile-open .friend-profile-back { display: grid; }
+  .friend-profile-col.mobile-open .friend-profile-body { flex: 1; min-height: 0; overflow: auto; padding: 24px 18px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .friend-profile-col.mobile-open .friend-profile-header { padding: 8px 18px; }
+  .friend-profile-col.mobile-open .friend-profile-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: var(--soft); }
+  .friend-profile-col.mobile-open .friend-profile-name { margin-top: 10px; font-size: 17px; font-weight: 700; letter-spacing: -.2px; overflow-wrap: anywhere; }
+  .friend-profile-col.mobile-open .friend-profile-status { font-size: 13px; color: var(--muted); }
+  .friend-profile-col.mobile-open .friend-profile-status.is-online { color: var(--accent); font-weight: 700; }
+  .friend-profile-col.mobile-open .friend-profile-meta { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 16px; }
+  .friend-profile-col.mobile-open .friend-profile-meta > div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent); border-radius: 10px; background: var(--soft); font-size: 13px; text-align: left; }
+  .friend-profile-col.mobile-open .friend-profile-meta > div[hidden] { display: none; }
+  .friend-profile-col.mobile-open .friend-profile-meta span { color: var(--muted); flex: 0 0 auto; }
+  .friend-profile-col.mobile-open .friend-profile-meta b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .friend-profile-col.mobile-open .friend-profile-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 16px; }
+  .friend-profile-col.mobile-open .friend-profile-actions button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); border-radius: 12px; background: var(--panel); color: var(--ink); font-size: 14px; font-weight: 600; }
+  #chat-avatar, #chat-title { cursor: pointer; }
+}
 @media (min-width: 900px) {
   :root { --panel-width: min(1280px, calc(100vw - 180px)); }
   html, body { background: var(--chat); font-family: Inter, "Segoe UI", Arial, sans-serif; font-size: 15px; }
@@ -330,13 +356,17 @@ audio.chat-media { width: min(100%, 360px); }
   .panel-chatroom .chat-compose #chat-text::placeholder { color: color-mix(in srgb, var(--ink) 55%, transparent); }
   .panel-chatroom .chat-compose #attach-button,
   .panel-chatroom .chat-compose #chat-submit {
+    display: inline-grid;
+    place-items: center;
     width: 40px;
     height: 40px;
     flex: 0 0 40px;
+    padding: 0;
     border: 0;
     border-radius: 50%;
     background: var(--accent);
     color: #fff;
+    line-height: 0;
     box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 28%, transparent);
     transition: transform .16s ease, filter .16s ease;
   }
@@ -564,7 +594,7 @@ audio.chat-media { width: min(100%, 360px); }
         <form class="chat-compose" id="chat-compose"><span class="attachment-wrap"><button id="attach-button" type="button" aria-label="Lampiran"><svg viewBox="0 -960 960 960" width="22" height="22" fill="#fff" aria-hidden="true"><path d="M450-450H230q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h220v-220q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v220h220q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H510v220q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37v-220Z"/></svg></button><span id="attachment-menu" class="attachment-menu" hidden><button type="button" data-pick="file">📁 File / Memory</button><button type="button" data-pick="photo">📷 Foto kamera</button><button type="button" data-pick="video">🎥 Video kamera</button><button type="button" data-pick="location">📍 Lokasi</button></span></span><input id="file-input" type="file" hidden><input id="photo-input" type="file" accept="image/*" capture="environment" hidden><input id="video-input" type="file" accept="video/*" capture="environment" hidden><input id="chat-text" placeholder="Ketik pesan..." autocomplete="off"><button id="chat-submit" type="button" aria-label="Rekam audio"><svg viewBox="0 -960 960 960" width="20" height="20" fill="#fff" aria-hidden="true"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35ZM440-120v-123q-104-14-172-93t-68-184q0-13 8.5-21.5T230-550q13 0 21.5 8.5T260-520q0 92 64 156t156 64q92 0 156-64t64-156q0-13 8.5-21.5T730-550q13 0 21.5 8.5T760-520q0 105-68 184t-172 93v123q0 17-11.5 28.5T480-80q-17 0-28.5-11.5T440-120Zm40-360q17 0 28.5-11.5T520-520v-240q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760v240q0 17 11.5 28.5T480-480Zm0-120Z"/></svg></button></form>
       </section>
       <section class="friend-profile-col" aria-label="Profil teman">
-        <header class="panel-header friend-profile-header"><h1>Profil Teman</h1></header>
+        <header class="panel-header friend-profile-header"><button class="panel-back friend-profile-back" type="button" data-fp-close aria-label="Kembali ke chat">‹</button><h1>Profil Teman</h1></header>
         <div class="friend-profile-body">
           <img class="friend-profile-avatar" src="assets/logo-192.png" alt="">
           <strong class="friend-profile-name">—</strong>
