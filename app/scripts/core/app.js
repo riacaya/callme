@@ -29,6 +29,13 @@
   }
   function closeSettingsDrawer() {
     const { menu, backdrop, btn } = settingsDrawer();
+    const rail = document.getElementById("app-rail");
+    if (rail?.classList.contains("mobile-open")) {
+      rail.classList.remove("mobile-open");
+      backdrop?.classList.remove("open");
+      btn?.setAttribute("aria-expanded", "false");
+      return;
+    }
     if (!menu?.classList.contains("open")) return;
     menu.classList.remove("open");
     backdrop?.classList.remove("open");
@@ -205,6 +212,11 @@
         if (def.action === "toggle") {
           btn.setAttribute("aria-expanded", "false");
           btn.addEventListener("click", () => {
+            // HP: ☰ di dalam rail menutup menu overlay.
+            if (window.matchMedia("(max-width:899px)").matches) {
+              closeSettingsDrawer();
+              return;
+            }
             const expanded = rail.classList.toggle("rail-expanded");
             btn.setAttribute("aria-expanded", String(expanded));
             try { localStorage.setItem("callme-v2-rail-expanded", expanded ? "1" : "0"); } catch { /* abaikan */ }

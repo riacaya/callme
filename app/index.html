@@ -482,6 +482,24 @@ audio.chat-media { width: min(100%, 360px); }
 /* Desktop: layout ala Messenger — rail icon besar (kiri) + konten (teman/chat/profil).
    Layar HP (<900px) tetap pakai 1 kolom seperti sebelumnya. */
 .app-rail{display:none}
+@media (max-width:899px){
+  /* Rail sebagai menu overlay HP (dibuka via ☰ header, selalu dengan teks). */
+  .app-rail{display:flex;position:fixed;top:0;left:0;bottom:0;z-index:1201;width:min(280px,86vw);flex-direction:column;align-items:stretch;padding:0 12px 16px;gap:6px;background:var(--panel);color:var(--ink);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);transform:translateX(-100%);visibility:hidden;transition:transform .25s cubic-bezier(.4,0,.2,1),visibility .25s;box-shadow:2px 0 16px rgba(0,0,0,.18);overflow-x:hidden;overflow-y:auto;scrollbar-width:none}
+  .app-rail::-webkit-scrollbar{display:none}
+  .app-rail.mobile-open{transform:translateX(0);visibility:visible}
+  .app-rail .rail-head{display:flex;align-items:center;justify-content:flex-start;width:calc(100% + 24px);height:56px;flex:0 0 auto;margin:0 -12px 8px;padding:0 12px;background:var(--head);color:#fff}
+  .app-rail .rail-head button{color:#fff;width:auto;height:48px;gap:14px;padding:0 14px;border-radius:12px}
+  .app-rail .rail-head button:hover,.app-rail .rail-head button:focus-visible{background:color-mix(in srgb,#fff 16%,transparent)}
+  .app-rail button{display:flex;align-items:center;justify-content:flex-start;gap:14px;width:100%;height:48px;padding:0 14px;border:0;border-radius:12px;background:transparent;color:var(--ink);cursor:pointer;flex:0 0 auto}
+  .app-rail button:hover,.app-rail button:focus-visible{background:var(--soft)}
+  .app-rail button[hidden]{display:none!important}
+  .app-rail button svg{width:26px;height:26px;display:block;flex:0 0 auto}
+  .app-rail .rail-label{display:inline;font-size:14px;font-weight:650;letter-spacing:-.1px;white-space:nowrap;overflow:hidden}
+  .app-rail .rail-sep{width:100%;height:1px;background:color-mix(in srgb,var(--ink) 14%,transparent);margin:6px 0;flex:0 0 auto}
+  .app-rail .rail-sep.rail-bottom,.app-rail button.rail-bottom{margin-top:auto}
+  /* Drawer lama disembunyikan di HP (elemen tetap ada untuk kontrol internal). */
+  .main-menu{display:none !important}
+}
 @media (min-width:900px){
   .app-shell{display:flex;flex-direction:row;width:100%;height:100dvh;margin:0 auto;overflow:hidden;position:relative;background:var(--chat)}
   #panel-outlet{flex:1;min-width:0;height:100dvh}
@@ -630,30 +648,28 @@ audio.chat-media { width: min(100%, 360px); }
         (function(){
           function init(){
             var btn=document.getElementById('main-menu-btn');
-            var menu=document.getElementById('main-menu');
             var backdrop=document.getElementById('main-menu-backdrop');
-            var closeBtn=document.getElementById('main-menu-close');
-            if(!btn||!menu||!backdrop) return;
-            function open(){ menu.classList.add('open'); backdrop.classList.add('open'); menu.setAttribute('aria-hidden','false'); btn.setAttribute('aria-expanded','true'); }
-            function close(){ menu.classList.remove('open'); backdrop.classList.remove('open'); menu.setAttribute('aria-hidden','true'); btn.setAttribute('aria-expanded','false'); }
-            btn.addEventListener('click', function(e){ e.preventDefault(); menu.classList.contains('open')?close():open(); });
-            backdrop.addEventListener('click', close);
-            closeBtn&&closeBtn.addEventListener('click', close);
-            menu.addEventListener('click', function(e){
-              var item = e.target && e.target.closest ? e.target.closest('button,a,[data-open-panel],[data-logout]') : null;
-              if(!item) return;
-              var isLogout = item.hasAttribute('data-logout');
-              close();
-              if(isLogout){
-                try{ window.CallMeWebPush?.unregister?.(); }catch(_){ }
-                try{ window.CallMeP2P?.stop?.(); }catch(_){ }
-                try{ sessionStorage.removeItem('callme-v2-session-user'); sessionStorage.removeItem('callme-v2-session-token'); localStorage.removeItem('callme-v2-persistent-session'); }catch(_){ }
-                try{ window.CallMeApp?.show?.('login'); }catch(_){ }
-                e.preventDefault();
-                e.stopPropagation();
-              }
+            var rail=document.getElementById('app-rail');
+            if(!btn||!backdrop) return;
+            var isMobile=function(){ return window.matchMedia('(max-width:899px)').matches; };
+            function openRail(){ if(!rail) return; rail.classList.add('mobile-open','rail-expanded'); backdrop.classList.add('open'); btn.setAttribute('aria-expanded','true'); }
+            function closeRail(){ if(rail) rail.classList.remove('mobile-open'); backdrop.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
+            btn.addEventListener('click', function(e){
+              e.preventDefault();
+              if(!isMobile()) return;
+              rail && rail.classList.contains('mobile-open') ? closeRail() : openRail();
+            });
+            backdrop.addEventListener('click', function(){ if(isMobile()) closeRail(); });
+            document.addEventListener('click', function(e){
+              if(!isMobile() || !rail || !rail.classList.contains('mobile-open')) return;
+              var target = e.target && e.target.closest ? e.target.closest('#app-rail button') : null;
+              if(!target) return;
+              if(target.id === 'rail-toggle'){ e.preventDefault(); closeRail(); return; }
+              // Tutup rail setelah aksi/navigasi item
+              setTimeout(closeRail, 0);
             }, true);
-            document.addEventListener('keydown', function(e){ if(e.key==='Escape') close(); });
+            document.addEventListener('keydown', function(e){ if(e.key==='Escape' && isMobile()) closeRail(); });
+            window.addEventListener('resize', function(){ if(!isMobile()) closeRail(); });
           }
           if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
         })();
