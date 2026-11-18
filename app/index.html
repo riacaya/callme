@@ -505,7 +505,7 @@ video::-webkit-media-controls-panel { display:none !important; }
 .app-rail{display:none}
 @media (max-width:899px){
   /* Rail sebagai menu overlay HP (dibuka via ☰ header, selalu dengan teks). */
-  .app-rail{display:flex;position:fixed;top:0;left:0;bottom:0;z-index:1201;width:min(280px,86vw);flex-direction:column;align-items:stretch;padding:0 12px 16px;gap:6px;background:var(--panel);color:var(--ink);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);transform:translateX(-100%);visibility:hidden;transition:transform .25s cubic-bezier(.4,0,.2,1),visibility .25s;box-shadow:2px 0 16px rgba(0,0,0,.18);overflow-x:hidden;overflow-y:auto;scrollbar-width:none}
+  .app-rail{display:flex;position:fixed;top:0;left:0;bottom:0;z-index:1201;width:min(280px,86vw);flex-direction:column;align-items:stretch;padding:0 12px 16px;gap:6px;background:var(--chat);color:var(--ink);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);transform:translateX(-100%);visibility:hidden;transition:transform .25s cubic-bezier(.4,0,.2,1),visibility .25s;box-shadow:2px 0 16px rgba(0,0,0,.18);overflow-x:hidden;overflow-y:auto;scrollbar-width:none}
   .app-rail::-webkit-scrollbar{display:none}
   .app-rail.mobile-open{transform:translateX(0);visibility:visible}
   .app-rail .rail-head{display:flex;align-items:center;justify-content:flex-start;width:calc(100% + 24px);height:56px;flex:0 0 auto;margin:0 -12px 8px;padding:0 12px;background:var(--head);color:#fff}
@@ -526,7 +526,7 @@ video::-webkit-media-controls-panel { display:none !important; }
   #panel-outlet{flex:1;min-width:0;height:100dvh}
   /* Rail ikut alur flex (bukan absolute) agar menempel di kiri tanpa
      menimpa panel teman/chat yang posisinya absolute di dalam outlet. */
-  .app-rail{flex:0 0 92px;background:var(--panel);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:6px;z-index:1;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;transition:flex-basis .18s ease}
+  .app-rail{flex:0 0 92px;background:var(--chat);border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:6px;z-index:1;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;transition:flex-basis .18s ease}
   .app-rail::-webkit-scrollbar{display:none}
   /* Ukuran tombol & ikon sama di kondisi terlipat maupun terbuka. */
   .app-rail button{display:flex;align-items:center;justify-content:center;width:48px;height:48px;padding:0;border:0;border-radius:12px;background:transparent;color:var(--ink);cursor:pointer;flex:0 0 auto}
