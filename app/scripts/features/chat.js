@@ -904,9 +904,10 @@
         "aria-label",
         text ? "Kirim" : recorder ? "Berhenti merekam" : "Rekam audio",
       );
-      submit.querySelector("svg").setAttribute(
+      const path = submit.querySelector("svg path");
+      if (path) path.setAttribute(
         "d",
-        window.CallMeIcons.paths[text ? "send" : recorder ? "stop" : "mic"] || "",
+        window.CallMeIcons?.paths?.[text ? "send" : recorder ? "stop" : "mic"] || "",
       );
     }
     input.addEventListener("input", updateSubmit);
