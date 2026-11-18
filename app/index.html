@@ -188,9 +188,41 @@ video::-webkit-media-controls-panel { display:none !important; }
 @keyframes loc-pulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.55)}70%{box-shadow:0 0 0 14px rgba(59,130,246,0)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
 
 
-/* Kolom profil teman hanya untuk desktop; default disembunyikan. */
+/* Profil teman: overlay (desktop & mobile). */
 .friend-profile-col { display: none; }
 .friend-profile-back { display: none; }
+@media (min-width:900px) {
+  .friend-profile-col.overlay-open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(420px, calc(100% - 64px));
+    max-height: calc(100% - 64px);
+    z-index: 40;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    box-shadow: 0 18px 48px rgba(0,0,0,.22);
+    background: var(--panel);
+    overflow: hidden;
+  }
+  .friend-profile-col.overlay-open .friend-profile-back { display: grid; }
+  .friend-profile-col.overlay-open .friend-profile-body { flex: 1; min-height: 0; overflow: auto; padding: 24px 18px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .friend-profile-col.overlay-open .friend-profile-header { padding: 8px 18px; }
+  .friend-profile-col.overlay-open .friend-profile-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: var(--soft); }
+  .friend-profile-col.overlay-open .friend-profile-name { margin-top: 10px; font-size: 17px; font-weight: 700; }
+  .friend-profile-col.overlay-open .friend-profile-status { font-size: 13px; color: var(--muted); }
+  .friend-profile-col.overlay-open .friend-profile-status.is-online { color: var(--accent); font-weight: 700; }
+  .friend-profile-col.overlay-open .friend-profile-meta { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 16px; }
+  .friend-profile-col.overlay-open .friend-profile-meta > div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); border-radius: 8px; font-size: 13px; }
+  .friend-profile-col.overlay-open .friend-profile-meta > div[hidden] { display: none; }
+  .friend-profile-col.overlay-open .friend-profile-meta span { color: var(--muted); }
+  .friend-profile-col.overlay-open .friend-profile-meta b { font-weight: 600; }
+  .friend-profile-col.overlay-open .friend-profile-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 10px; }
+  .friend-profile-col.overlay-open .friend-profile-actions button { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); border-radius: 8px; background: var(--soft); color: var(--ink); font-size: 13px; }
+}
 @media (max-width:899px) {
   .friend-profile-col.mobile-open {
     display: flex;
@@ -377,28 +409,33 @@ video::-webkit-media-controls-panel { display:none !important; }
     inset: 0;
     z-index: 12;
   }
-  .panel[data-panel="profile"], .panel[data-panel="location"], .panel[data-panel="about"], .panel[data-panel="language"], .panel[data-panel="theme"] {
+  /* Panel overlay (desktop): mengambang di tengah, halaman utama tidak berubah */
+  .panel.overlay-open[data-panel="profile"],
+  .panel.overlay-open[data-panel="location"],
+  .panel.overlay-open[data-panel="about"],
+  .panel.overlay-open[data-panel="language"],
+  .panel.overlay-open[data-panel="theme"],
+  .panel.overlay-open[data-panel="admin"] {
+    display: flex !important;
     position: absolute;
-    inset: 0 auto 0 0;
-    width: 320px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(560px, calc(100% - 64px));
     height: auto;
-    z-index: 12;
-    border-right: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+    max-height: calc(100% - 64px);
+    inset: auto;
+    z-index: 40;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    box-shadow: 0 18px 48px rgba(0,0,0,.22);
     background: var(--panel);
+    overflow: hidden;
   }
+  .panel.overlay-open .panel-content { max-height: calc(100dvh - 180px); overflow: auto; }
   /* --- Kolom profil teman (kanan) — muncul hanya saat chatroom terbuka --- */
-  #panel-outlet:has(.panel-chatroom:not(.hidden)) .friend-profile-col {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    inset: 0 0 0 auto;
-    width: 300px;
-    background: var(--panel);
-    border-left: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
-    z-index: 3;
-  }
-  #panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-chatroom { right: 300px; }
-  #panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-chatroom .chat-item-media.media-expanded {
+  /* profil teman: overlay desktop */
+    #panel-outlet:has(.panel-chatroom:not(.hidden)) .panel-chatroom .chat-item-media.media-expanded {
     left: calc(50% + 10px);
     width: min(calc(var(--panel-width) - 620px), 980px) !important;
     max-width: min(calc(var(--panel-width) - 620px), 980px) !important;
@@ -506,7 +543,7 @@ video::-webkit-media-controls-panel { display:none !important; }
 .panel-admin .admin-user-name strong{font-size:13px}
 .panel-admin .admin-user-name small{color:var(--muted);font-size:11px}
 .panel-admin .admin-user-role{flex:none;color:var(--muted);font-size:11px}
-@media (min-width:900px){.panel-admin{position:absolute;inset:0 auto 0 0;width:320px;height:auto;z-index:12;border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);background:var(--panel)}}
+@media (min-width:900px){.panel-admin{background:var(--panel)}}
 .export-chat-status{min-height:0;margin:0 0 6px;padding:0 10px;color:var(--ink);font-size:12px;line-height:1.35;text-align:center}.export-chat-status:empty{display:none}#export-chat-button:disabled{opacity:.6;cursor:wait}
 /* Desktop: layout ala Messenger — rail icon besar (kiri) + konten (teman/chat/profil).
    Layar HP (<900px) tetap pakai 1 kolom seperti sebelumnya. */

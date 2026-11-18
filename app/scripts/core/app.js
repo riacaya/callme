@@ -28,7 +28,7 @@
     };
   }
   function closeSettingsDrawer() {
-    document.querySelector(".friend-profile-col")?.classList.remove("mobile-open");
+    document.querySelector(".friend-profile-col")?.classList.remove("mobile-open", "overlay-open");
     const { menu, backdrop, btn } = settingsDrawer();
     const rail = document.getElementById("app-rail");
     if (rail?.classList.contains("mobile-open")) {
@@ -44,10 +44,22 @@
     btn?.setAttribute("aria-expanded", "false");
   }
 
-  const COL2_PANELS = new Set(["friends", "profile", "admin", "language", "theme", "about", "location"]);
+  const OVERLAY_PANELS = new Set(["profile", "admin", "language", "theme", "about", "location"]);
   const FULLSCREEN_PANELS = new Set(["login", "voice-call", "video-call"]);
   const isDesktopSplit = () => window.matchMedia("(min-width:900px)").matches;
-  let activeCol2 = "friends"; // panel aktif di kolom 2 (desktop split)
+
+  function closeDesktopOverlays() {
+    // Tutup overlay data-panel (desktop)
+    panels.forEach((panel, key) => {
+      if (OVERLAY_PANELS.has(key)) {
+        panel.classList.remove("overlay-open");
+        panel.classList.add("hidden");
+      }
+    });
+    // Tutup overlay profil teman (desktop)
+    const fp = document.querySelector(".friend-profile-col");
+    if (fp) fp.classList.remove("overlay-open", "mobile-open");
+  }
 
   function show(name, opts) {
     closeSettingsDrawer();
@@ -57,47 +69,67 @@
     const options = opts || {};
 
     if (desktop && !FULLSCREEN_PANELS.has(name)) {
-      // Desktop split: kolom 2 (sidebar) dan kolom 3 (chatroom) dikelola terpisah.
-      if (COL2_PANELS.has(name)) {
-        activeCol2 = name;
-        // Ganti isi kolom 2; pertahankan chatroom kecuali diminta menutup.
+      // Desktop: halaman utama tetap (rail + daftar teman + chatroom).
+      // Panel tertentu dibuka sebagai overlay mengambang.
+      if (OVERLAY_PANELS.has(name)) {
+        // Buka satu overlay; tutup overlay lain, halaman utama tidak berubah.
         panels.forEach((panel, key) => {
-          if (key === "chatroom") {
-            if (options.closeChatroom) panel.classList.add("hidden");
+          if (FULLSCREEN_PANELS.has(key)) { panel.classList.add("hidden"); return; }
+          if (OVERLAY_PANELS.has(key)) {
+            const on = key === name;
+            panel.classList.toggle("hidden", !on);
+            panel.classList.toggle("overlay-open", on);
             return;
           }
-          if (COL2_PANELS.has(key)) {
-            panel.classList.toggle("hidden", key !== activeCol2);
-          } else {
-            // Sembunyikan panel lain (termasuk fullscreen seperti login/call).
+          // halaman utama (friends/chatroom) tidak diubah
+        });
+        // pastikan overlay profil teman tertutup saat buka overlay lain
+        document.querySelector(".friend-profile-col")?.classList.remove("overlay-open", "mobile-open");
+      } else if (name === "friends") {
+        // Kolom 2 (daftar teman) selalu ada; opsional tutup chatroom.
+        panels.forEach((panel, key) => {
+          if (key === "friends") {
+            panel.classList.remove("hidden");
+          } else if (key === "chatroom") {
+            if (options.closeChatroom) panel.classList.add("hidden");
+          } else if (FULLSCREEN_PANELS.has(key)) {
             panel.classList.add("hidden");
+          } else if (OVERLAY_PANELS.has(key)) {
+            if (options.closeChatroom) { panel.classList.add("hidden"); panel.classList.remove("overlay-open"); }
           }
         });
+        if (options.closeChatroom) document.querySelector(".friend-profile-col")?.classList.remove("overlay-open", "mobile-open");
       } else if (name === "chatroom") {
-        // Buka chatroom di kolom 3; pastikan kolom 2 tetap menampilkan panel aktifnya (mis. daftar teman).
         panels.forEach((panel, key) => {
           if (key === "chatroom") {
             panel.classList.remove("hidden");
-          } else if (COL2_PANELS.has(key)) {
-            // Pertahankan/tampilkan panel aktif kolom 2 (agar daftar teman tidak hilang saat buka chat).
-            if (!COL2_PANELS.has(activeCol2)) activeCol2 = "friends";
-            panel.classList.toggle("hidden", key !== activeCol2);
-          } else {
-            // Sembunyikan panel lain (termasuk fullscreen seperti login/call).
+          } else if (key === "friends") {
+            panel.classList.remove("hidden");
+          } else if (FULLSCREEN_PANELS.has(key)) {
             panel.classList.add("hidden");
           }
+          // overlay tidak diubah
         });
       } else {
-        // Panel lain: fallback perilaku tunggal.
         panels.forEach((panel, key) => {
           panel.classList.toggle("hidden", key !== name);
         });
       }
     } else {
-      // Mobile / panel fullscreen: satu panel aktif.
+      // Mobile / panel fullscreen: satu panel aktif. Tutup overlay desktop jika ada.
+      if (!desktop) closeDesktopOverlays();
       panels.forEach((panel, key) => {
-        panel.classList.toggle("hidden", key !== name);
+        if (desktop && FULLSCREEN_PANELS.has(name)) {
+          // fullscreen di desktop: sembunyikan semua termasuk overlay
+          panel.classList.toggle("hidden", key !== name);
+          if (OVERLAY_PANELS.has(key)) panel.classList.remove("overlay-open");
+        } else {
+          panel.classList.toggle("hidden", key !== name);
+        }
       });
+      if (desktop && FULLSCREEN_PANELS.has(name)) {
+        document.querySelector(".friend-profile-col")?.classList.remove("overlay-open", "mobile-open");
+      }
     }
 
     window.dispatchEvent(
@@ -301,16 +333,27 @@
         if (typeof window.CallMeApp?.show === "function") window.CallMeApp.show(panel);
         return;
       }
+      // Tutup overlay profil teman
+      const fpClose = event.target.closest("[data-fp-close]");
+      if (fpClose) {
+        event.preventDefault();
+        const fp = document.querySelector(".friend-profile-col");
+        if (fp) fp.classList.remove("overlay-open", "mobile-open");
+        return;
+      }
       const back = event.target.closest("[data-back]");
       if (back) {
         event.preventDefault();
         const fromPanel = back.closest("[data-panel]")?.dataset.panel;
         const target = back.dataset.back;
         if (target === "friends" && fromPanel === "chatroom") {
-          // Kembali dari chatroom: tutup chatroom, tampilkan daftar teman.
+          // Kembali dari chatroom: tutup chatroom, halaman utama tetap.
           show("friends", { closeChatroom: true });
+        } else if (OVERLAY_PANELS.has(fromPanel || "") && isDesktopSplit()) {
+          // Kembali dari panel overlay (desktop): tutup overlay, halaman utama tidak berubah.
+          closeDesktopOverlays();
         } else if (target === "friends" && ["profile", "admin", "about", "location", "language", "theme"].includes(fromPanel || "")) {
-          // Kembali dari panel kolom 2: tampilkan daftar teman di kolom 2, chatroom tetap.
+          // Mobile: kembali dari panel ke daftar teman.
           show("friends");
         } else if (target === "chatroom") {
           show("chatroom");

@@ -458,21 +458,22 @@
     window.CallMeFriendProfile = { render: renderFriendProfile };
     document.querySelector(".friend-profile-col")?.addEventListener("click", (event) => {
       if (event.target.closest?.("[data-fp-close]")) {
-        document.querySelector(".friend-profile-col")?.classList.remove("mobile-open");
+        document.querySelector(".friend-profile-col")?.classList.remove("mobile-open", "overlay-open");
         return;
       }
       const action = event.target.closest?.("[data-fp-action]")?.getAttribute("data-fp-action");
       if (!action || !profileFriend) return;
       if (action === "message") {
-        document.querySelector(".friend-profile-col")?.classList.remove("mobile-open");
+        document.querySelector(".friend-profile-col")?.classList.remove("mobile-open", "overlay-open");
         document.getElementById("chat-text")?.focus();
         return;
       }
       if (action === "voice" || action === "video") {
-        document.querySelector(".friend-profile-col")?.classList.remove("mobile-open");
+        document.querySelector(".friend-profile-col")?.classList.remove("mobile-open", "overlay-open");
         document.querySelector(`.chat-action[data-call="${action}"]`)?.click();
       }
     });
     window.CallMeFriends = { load };
   });
 })();
+
