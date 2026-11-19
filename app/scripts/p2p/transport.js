@@ -268,8 +268,14 @@
         if (!selected) return false;
         const local = stats.get(selected.localCandidateId);
         const remote = stats.get(selected.remoteCandidateId);
-        const relay = local?.candidateType === "relay" || remote?.candidateType === "relay";
-        const route = relay ? "TURN" : "Direct WebRTC";
+        const localType = local?.candidateType || local?.type;
+        const remoteType = remote?.candidateType || remote?.type;
+        const isRelay = localType === "relay" || remoteType === "relay";
+        // Hindari label menyesatkan: "Direct" hanya jika kedua kandidat diketahui
+        // dan bukan relay. Jika tipe belum lengkap (kecuali sudah pasti relay),
+        // coba lagi sampai statistik kandidat tersedia.
+        if (!isRelay && (!localType || !remoteType)) return false;
+        const route = isRelay ? "TURN (relay)" : "Direct (P2P)";
         routeByPeer.set(next.peer, route);
         window.dispatchEvent(new CustomEvent("callme:p2p-route", { detail: { peerId: next.peer, route } }));
         return true;
