@@ -76,11 +76,13 @@
 
     // Suara & notifikasi
     const applySoundUi = () => {
-      const s = window.CallMeSound?.settings?.() || { callRingtone: true, messageTone: true };
+      const st = window.CallMeSound?.settings?.() || { callRingtone: true, messageTone: true, messageToneType: "classic" };
       const ring = document.getElementById("sound-call-ringtone");
       const msg = document.getElementById("sound-message-tone");
-      if (ring) ring.checked = s.callRingtone !== false;
-      if (msg) msg.checked = s.messageTone !== false;
+      const pick = document.getElementById("sound-message-tone-pick");
+      if (ring) ring.checked = st.callRingtone !== false;
+      if (msg) msg.checked = st.messageTone !== false;
+      if (pick) pick.value = st.messageToneType || "classic";
     };
     applySoundUi();
     document.getElementById("sound-call-ringtone")?.addEventListener("change", (e) => {
@@ -91,6 +93,15 @@
       if (e.target.checked) {
         try { window.CallMeSound?.playMessageTone?.(); } catch (_) {}
       }
+    });
+    document.getElementById("sound-message-tone-pick")?.addEventListener("change", (e) => {
+      const type = e.target.value || "classic";
+      window.CallMeSound?.set?.({ messageToneType: type });
+      try { window.CallMeSound?.testMessageTone?.(type); } catch (_) {}
+    });
+    document.getElementById("sound-message-test")?.addEventListener("click", () => {
+      const type = document.getElementById("sound-message-tone-pick")?.value || "classic";
+      try { window.CallMeSound?.testMessageTone?.(type); } catch (_) {}
     });
 
     // Koneksi: TURN (relay) aktif/nonaktif, default aktif

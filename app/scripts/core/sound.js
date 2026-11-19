@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const KEY = "callme-v2-sound";
-  const defaults = { callRingtone: true, messageTone: true };
+  const defaults = { callRingtone: true, messageTone: true, messageToneType: "classic" };
   let cache = null;
   let audioCtx = null;
   let ringTimer = null;
@@ -83,25 +83,54 @@
     }
     cleanupNodes();
   }
-  function playMessageTone() {
-    if (!load().messageTone) return;
+  function playTone(type) {
     const ctx = getCtx();
     if (!ctx) return;
     try {
       const t = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, t);
-      osc.frequency.exponentialRampToValueAtTime(1320, t + 0.12);
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.11, t + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.2);
+      const kind = type || load().messageToneType || "classic";
+      if (kind === "soft") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, t);
+        osc.frequency.exponentialRampToValueAtTime(659.25, t + 0.16);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+        osc.start(t);
+        osc.stop(t + 0.3);
+      } else if (kind === "bright") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(1046.5, t);
+        osc.frequency.exponentialRampToValueAtTime(1568, t + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(1318.5, t + 0.16);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.10, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        osc.start(t);
+        osc.stop(t + 0.24);
+      } else {
+        // classic
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, t);
+        osc.frequency.exponentialRampToValueAtTime(1320, t + 0.12);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.11, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        osc.start(t);
+        osc.stop(t + 0.2);
+      }
     } catch (_) {}
+  }
+  function playMessageTone() {
+    if (!load().messageTone) return;
+    playTone();
+  }
+  function testMessageTone(type) {
+    playTone(type);
   }
 
   window.CallMeSound = {
@@ -112,5 +141,6 @@
     startRingtone: startRingtone,
     stopRingtone: stopRingtone,
     playMessageTone: playMessageTone,
+    testMessageTone: testMessageTone,
   };
 })();
