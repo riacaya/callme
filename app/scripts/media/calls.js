@@ -768,7 +768,8 @@
         window.CallMeApp.show(`${mode}-call`);
         setIncomingControls(view, true);
         status.textContent = mode === "video" ? "Panggilan video masuk" : "Panggilan suara masuk";
-        try { window.CallMeSound?.startRingtone?.(); } catch (_) {}
+        // APK/native menangani nada dering sendiri; hindari nada ganda di app.
+        try { if (!window.CallMeAndroid) window.CallMeSound?.startRingtone?.(); } catch (_) {}
         const tryAutoAnswer = () => {
           if (!window.__callmeAutoAnswerPending) return false;
           const btn = view.querySelector(`[data-call-accept="${mode}"]`);

@@ -1,5 +1,5 @@
 /* CallMe service worker: push notifications + versioned app-shell caching. */
-const CACHE_VERSION = "callme-v7-2026-11-18-v62";
+const CACHE_VERSION = "callme-v7-2026-11-18-v63";
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   "./",
@@ -165,6 +165,8 @@ function showCallMeNotification(data) {
   };
   if (kind === "call") {
     options.requireInteraction = true;
+    options.renotify = true;
+    options.vibrate = [300, 120, 300, 120, 300, 120, 600];
     options.actions = [
       { action: "answer", title: "Jawab", icon: new URL("assets/call-answer.svg", self.location.href).href },
       { action: "decline", title: "Tolak", icon: new URL("assets/call-decline.svg", self.location.href).href },
