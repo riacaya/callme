@@ -1,5 +1,5 @@
 /* CallMe service worker: push notifications + versioned app-shell caching. */
-const CACHE_VERSION = "callme-v7-2026-11-18-v63";
+const CACHE_VERSION = "callme-v7-2026-11-18-v64";
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   "./",
@@ -134,10 +134,18 @@ self.addEventListener("push", function (event) {
     var activeUser = res[0];
     var clients = res[1] || [];
     if (!shouldDeliverPush(data, activeUser, clients)) return undefined;
-    if (data.kind === "call-accepted" || data.kind === "call-declined") {
+    if (data.kind === "call-accepted" || data.kind === "call-declined" || data.kind === "call-cancelled" || data.kind === "call-canceled" || data.kind === "call-hangup" || data.kind === "call-ended" || data.kind === "call-missed" || data.kind === "missed") {
       clients.forEach(function (client) {
         client.postMessage({ type: "callme:call-response", detail: { kind: data.kind, peerId: data.sender || data.title || "", callId: data.id || "" } });
       });
+      if (/^call-(cancel|hangup|end|missed)|^missed/.test(String(data.kind || ""))) {
+        return self.registration.getNotifications().then(function (list) {
+          list.forEach(function (n) {
+            var nd = n.data || {};
+            if (nd.kind === "call") n.close();
+          });
+        }).catch(function () {});
+      }
       return undefined;
     }
     return showCallMeNotification(data);

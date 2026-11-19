@@ -232,8 +232,11 @@
       void routeNotification(event.data.detail || {});
     if (event.data?.type === "callme:call-response") {
       const detail = event.data.detail || {};
-      if (detail.kind === "call-accepted" || detail.kind === "call-declined")
+      if (detail.kind === "call-accepted" || detail.kind === "call-declined") {
         window.dispatchEvent(new CustomEvent(`callme:fcm-${detail.kind}`, { detail: { peerId: detail.peerId || "" } }));
+      } else if (/^(call-cancel|call-hangup|call-end|call-missed|missed)/.test(String(detail.kind || ""))) {
+        window.dispatchEvent(new CustomEvent("callme:fcm-call-cancelled", { detail: { peerId: detail.peerId || "", callId: detail.callId || "" } }));
+      }
     }
   });
   window.addEventListener("callme:session-user", () => {

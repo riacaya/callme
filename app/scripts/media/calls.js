@@ -220,8 +220,10 @@
       remoteReceived = false;
       const
         call = currentCall || pendingIncoming?.incoming,
-        target = call?.peer || window.CallMeChat?.activePeer?.();
+        target = call?.peer || call?.peerId || session?.peerId || window.CallMeChat?.activePeer?.();
       if (!call && !currentCall && !pendingIncoming) {
+        if (notify && target)
+          window.CallMeP2P?.sendCallControl?.({ kind: "call-hangup" }, target);
         setChatCallButtonsHidden(false);
         callSession = null;
         window.CallMeApp.show(returnPanel);
@@ -490,7 +492,7 @@
       );
     document
       .querySelectorAll("[data-call-reject]")
-      .forEach((button) =>      button.addEventListener("click", async () => {
+      .forEach((button) => button.addEventListener("click", async () => {
         const incoming = pendingIncoming?.incoming;
         const target = incoming?.peer || incoming?.peerId;
         if (incoming) await activateCallRoom(target);
@@ -503,10 +505,14 @@
             try { window.CallMeP2P?.sendCallControl?.({ kind: "call-declined", callLogId: callSession?.logId || "" }, target); } catch (_) {}
             try { window.CallMeAndroid?.declinedCall?.(target, callSession?.logId || ""); } catch (_) {}
           }
+          window.CallMeAndroid?.cancelCall?.();
+          try { window.CallMeSound?.stopRingtone?.(); } catch (_) {}
+          finish(false);
+          return;
         }
-        window.CallMeAndroid?.cancelCall?.();
+        // Panggilan keluar/aktif dibatalkan/ditutup - beri tahu lawan agar panelnya ikut tertutup.
         try { window.CallMeSound?.stopRingtone?.(); } catch (_) {}
-        finish(false);
+        finish(true);
       }));
     document.querySelectorAll("[data-call-accept]").forEach((button) => {
       button.innerHTML = '<svg viewBox="0 -960 960 960" width="28" height="28" fill="#fff" aria-hidden="true"><path d="M795-120q-116 0-236.5-56T335-335Q232-438 176-558.5T120-795q0-19.29 12.86-32.14Q145.71-840 165-840h140q14 0 24 10t14 25l26.93 125.64Q372-665 369.5-653.5t-10.73 19.73L259-533q26 44 55 82t64 72q37 38 78 69.5t86 55.5l95-98q10-11 23.15-15 13.15-4 25.85-2l119 26q15 4 25 16.04 10 12.05 10 26.96v135q0 19.29-12.86 32.14Q814.29-120 795-120ZM229-588l81-82-23-110H180q2 42 13.5 88.5T229-588Zm369 363q41 19 89 31t93 14v-107l-103-21-79 83ZM229-588Zm369 363Z"/></svg>';
@@ -633,7 +639,7 @@
     };
     window.addEventListener("callme:p2p-message", (event) => {
       const detail = event.detail || {};
-      if (detail.kind === "call-hangup") {
+      if (detail.kind === "call-hangup" || detail.kind === "call-cancelled" || detail.kind === "call-canceled" || detail.kind === "call-ended" || detail.kind === "call-missed" || detail.kind === "missed") {
         finish(false);
         return;
       }
@@ -668,6 +674,20 @@
       if (callSession.logId) void updateCallLog(callSession.logId, peerId, "rejected");
       window.CallMeAndroid?.declinedCall?.();
       finish(false);
+    });
+    const sameCallPeer = (peerId) =>
+      peerId && callSession?.peerId &&
+      String(peerId).replace(/^cm-/i, "").toLowerCase() ===
+      String(callSession.peerId).replace(/^cm-/i, "").toLowerCase();
+    window.addEventListener("callme:fcm-call-cancelled", (event) => {
+      const peerId = event.detail?.peerId || event.detail?.sender || "";
+      if (!sameCallPeer(peerId)) return;
+      // Pemanggil membatalkan sebelum dijawab/ditolak - tutup panel dering.
+      if (callSession?.kind === "incoming" && !callSession.accepted) {
+        try { window.CallMeAndroid?.cancelCall?.(); } catch (_) {}
+        try { window.CallMeSound?.stopRingtone?.(); } catch (_) {}
+        finish(false);
+      }
     });
     // Panggilan fallback push saat APK terlihat: tampilkan panel dering
     // in-app menggantikan notifikasi sistem Jawab/Tolak. Bridge.pushCallShown
