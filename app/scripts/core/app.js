@@ -361,7 +361,7 @@
         } else if (OVERLAY_PANELS.has(fromPanel || "") && isDesktopSplit()) {
           // Kembali dari panel overlay (desktop): tutup overlay, halaman utama tidak berubah.
           closeDesktopOverlays();
-        } else if (target === "friends" && ["profile", "admin", "about", "location", "language", "theme"].includes(fromPanel || "")) {
+        } else if (target === "friends" && ["profile", "admin", "about", "location", "settings"].includes(fromPanel || "")) {
           // Mobile: kembali dari panel ke daftar teman.
           show("friends");
         } else if (target === "chatroom") {

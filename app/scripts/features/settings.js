@@ -5,7 +5,7 @@
     const iconTargets = [panel, menu].filter(Boolean);
 
     const icons = new Map([
-      ["Edit Profil", "👤"], ["Install APK", "📲"], ["Bahasa", "🌐"],
+      ["Edit Profil", "👤"], ["Bahasa", "🌐"],
       ["Senja", "🌅"], ["Natural", "🌿"], ["Dark", "🌙"],
       ["Ekspor Chat", "📦"], ["About", "ℹ️"], ["Log out", "↪️"],
     ]);
