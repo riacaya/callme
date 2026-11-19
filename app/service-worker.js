@@ -1,5 +1,5 @@
 /* CallMe service worker: push notifications + versioned app-shell caching. */
-const CACHE_VERSION = "callme-v7-2026-11-18-v56";
+const CACHE_VERSION = "callme-v7-2026-11-18-v57";
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   "./",

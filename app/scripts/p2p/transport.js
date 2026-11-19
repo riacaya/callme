@@ -202,29 +202,45 @@
   function attach(next) {
     const existing = connections.get(next.peer);
     if (existing && existing !== next) {
-      // Hanya sisi dengan ID lebih kecil yang membuat koneksi keluar.
-      // Ini mencegah dua DataConnection bersamaan saat room dibuka serentak.
+      // Glare: jika kedua sisi membuka koneksi hampir bersamaan, gunakan
+      // tie-breaker deterministik - sisi dengan ID lebih kecil mempertahankan
+      // koneksi keluar, sisi dengan ID lebih besar menerima koneksi masuk dari
+      // sisi kecil. Untuk koneksi pengganti (peer reconnect/koneksi lama
+      // stale), koneksi masuk baru dari peer diprioritaskan.
       const selfId = String(peer?.id || "").toLowerCase();
-      const keepIncoming = selfId > String(next.peer || "").toLowerCase();
-      // Koneksi lama yang tidak menjawab heartbeat dianggap stale. Ini
-      // penting ketika HP membuat koneksi baru tetapi PC masih menyimpan
-      // objek DataConnection lama sebagai open.
-      const stale =
-        !existing.__lastPresence || Date.now() - existing.__lastPresence > 2500;
-      // Jika peer lawan datang membawa koneksi baru, jalur masuk itu harus
-      // menggantikan jalur lama yang mungkin hanya tampak open di sisi ini.
-      // Tanpa ini, pengirim dapat menunggu sampai refresh membuang jalur lama.
-      const keep = next.__incoming
-        ? next
-        : stale && !existing.open
-          ? next
-          : keepIncoming
-            ? next.__incoming
-              ? next
-              : existing
-            : next.__incoming
-              ? existing
-              : next;
+      const remoteId = String(next.peer || "").toLowerCase();
+      const weAreLower = selfId < remoteId;
+      const existingReady = readyConnections.has(existing);
+      const existingHealthy =
+        existingReady ||
+        (existing.__lastPresence && Date.now() - existing.__lastPresence <= 10000);
+      const existingFreshAttempt =
+        !existingHealthy &&
+        Date.now() - (existing.__createdAt || 0) < 12000;
+      const preferIncomingReplacement = !existingHealthy && !existingFreshAttempt;
+
+      let keep;
+      if (next.__incoming) {
+        if (existingHealthy) {
+          // Koneksi lama masih sehat; pertahankan agar stabil.
+          keep = existing;
+        } else if (existingFreshAttempt) {
+          // Kedua sisi mencoba bersamaan: hormati tie-breaker ID.
+          keep = weAreLower ? existing : next;
+        } else {
+          // Koneksi lama stale/zombie; terima koneksi baru dari peer.
+          keep = next;
+        }
+      } else {
+        // next adalah koneksi keluar yang kita buat.
+        if (existingHealthy) {
+          keep = existing;
+        } else if (existingFreshAttempt) {
+          keep = weAreLower ? next : existing;
+        } else {
+          keep = next;
+        }
+      }
       if (keep === existing) {
         try {
           next.close();
