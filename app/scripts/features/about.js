@@ -61,6 +61,24 @@
     if (peer !== null) rows.append(row("Peer P2P", peer));
 
     try {
+      var activePeer = window.CallMeChat && typeof window.CallMeChat.activePeer === "function" ? window.CallMeChat.activePeer() : null;
+      var activeRoute = activePeer && window.CallMeTransport && typeof window.CallMeTransport.getRoute === "function" ? window.CallMeTransport.getRoute(activePeer) : "";
+      rows.append(row("Rute P2P (chat aktif)", activePeer ? (activeRoute || "mendeteksi/belum ada") : "-"));
+      if (window.CallMeStorage && typeof window.CallMeStorage.all === "function" && window.CallMeTransport && typeof window.CallMeTransport.getRoute === "function") {
+        window.CallMeStorage.all("contacts").then(function (contacts) {
+          var found = [];
+          (contacts || []).forEach(function (c) {
+            var id = c && (c.peerId || c.username || c.phone);
+            if (!id) return;
+            var r = window.CallMeTransport.getRoute(id);
+            if (r) found.push(String(id).replace(/^cm-/i, "") + ": " + r);
+          });
+          if (found.length) box.append(row("Rute P2P (diketahui)", found.join(" | ")));
+        }).catch(function () {});
+      }
+    } catch (_) {}
+
+    try {
       if (typeof Notification !== "undefined") {
         rows.append(row("Izin notifikasi", Notification.permission));
       }
