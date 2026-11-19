@@ -737,22 +737,29 @@
       const activePeer = normalizePeer(activeFriend.peerId);
       if (!eventPeer || eventPeer !== activePeer) return;
       if (event.detail.status === "online") {
-        void flushPendingMessages(eventPeer);
-        void flushPendingFiles(eventPeer);
+        // Koneksi siap (dari arah mana pun) - hentikan pencarian segera dan pakai jalur ini.
         cancelConnectionRetry();
-        window.CallMeP2P?.send?.(
-          { kind: "room-active", roomId: roomKey(activeFriend.peerId) },
-          activeFriend.peerId,
-        );
-        setConnectionStatus(
-          connectionStatus(activeFriend.display_name || activeFriend.phone || activePeer),
-        );
-        refreshConnectionRoute(activePeer);
+        activateConnectedRoom(activeFriend.peerId);
       } else {
         setConnectionStatus(`Terputus dari ${String(id).replace(/^cm-/i, "")}`);
         if (serverReady && isRoomActive()) maintainConnection(1500);
       }
     });
+    const activateConnectedRoom = (peerId) => {
+      const eventPeer = normalizePeer(peerId);
+      if (!eventPeer || !activeFriend?.peerId || normalizePeer(activeFriend.peerId) !== eventPeer) return;
+      if (!window.CallMeP2P?.isConnected?.(peerId)) return;
+      void flushPendingMessages(eventPeer);
+      void flushPendingFiles(eventPeer);
+      window.CallMeP2P?.send?.(
+        { kind: "room-active", roomId: roomKey(activeFriend.peerId) },
+        activeFriend.peerId,
+      );
+      setConnectionStatus(
+        connectionStatus(activeFriend.display_name || activeFriend.phone || eventPeer),
+      );
+      refreshConnectionRoute(activeFriend.peerId);
+    };
     const maintainConnection = (initialDelay = 0) => {
       cancelConnectionRetry();
       if (!activeFriend?.peerId) return;
@@ -760,8 +767,6 @@
       // Ambil status aktual dari transport agar tidak menunggu refresh.
       if (window.CallMeTransport?.isPeerReady?.()) {
         serverReady = true;
-        if (isRoomActive() && !window.CallMeP2P?.isConnected?.(activeFriend.peerId))
-          setConnectionStatus("P2P ready");
       }
       const peerId = activeFriend.peerId;
       const find = () => {
@@ -771,20 +776,20 @@
         }
         if (!serverReady) {
           setConnectionStatus("Menghubungi server...");
-          connectionTimer = null;
+          connectionTimer = setTimeout(find, 1500);
           return;
         }
         if (window.CallMeP2P?.isConnected?.(peerId)) {
+          // Koneksi sudah siap (mis. dibangun saat standby) - hentikan pencarian
+          // segera dan gunakan jalur yang ada.
           connectionTimer = null;
-          setConnectionStatus(
-            connectionStatus(activeFriend.display_name || activeFriend.phone || window.CallMeApp.normalize(peerId)),
-          );
+          activateConnectedRoom(peerId);
           return;
         }
         if (window.CallMeP2P?.hasConnection?.(peerId)) {
           // Jangan berhenti saat masih "connecting": koneksi pending bisa
           // mati tanpa event (EXPIRE), sehingga loop pemantauan harus tetap
-          // berjalan sampai benar-benar terbuka — transport membuang
+          // berjalan sampai benar-benar terbuka - transport membuang
           // koneksi pending yang menua (>8 detik) dan mencoba ulang.
           setConnectionStatus("Menghubungkan teman...");
         } else {
