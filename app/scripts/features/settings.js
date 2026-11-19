@@ -87,6 +87,39 @@
         try { window.CallMeSound?.playMessageTone?.(); } catch (_) {}
       }
     });
+
+    // Koneksi: TURN (relay) aktif/nonaktif, default aktif
+    const turnEnabledInput = document.getElementById("setting-turn-enabled");
+    const turnStatus = document.getElementById("setting-turn-status");
+    const syncTurnUi = () => {
+      const enabled = localStorage.getItem("callme-v2-no-turn") !== "1";
+      if (turnEnabledInput) turnEnabledInput.checked = enabled;
+      if (turnStatus) {
+        turnStatus.textContent = enabled
+          ? "Aktif (default): gunakan STUN + TURN saat koneksi langsung tidak memungkinkan. P2P akan dimulai ulang saat diubah."
+          : "Nonaktif: gunakan STUN/direct saja (tanpa relay TURN). Jika direct tidak memungkinkan, koneksi bisa gagal. P2P akan dimulai ulang saat diubah.";
+      }
+    };
+    syncTurnUi();
+    turnEnabledInput?.addEventListener("change", () => {
+      const enabled = !!turnEnabledInput.checked;
+      localStorage.setItem("callme-v2-no-turn", enabled ? "0" : "1");
+      syncTurnUi();
+      const user = sessionStorage.getItem("callme-v2-session-user") || "";
+      if (user && window.CallMeTransport) {
+        try {
+          window.CallMeTransport.stop();
+          window.CallMeTransport.start(user);
+          if (turnStatus) {
+            turnStatus.textContent = enabled
+              ? "TURN aktif. P2P dimulai ulang (STUN + TURN)."
+              : "TURN nonaktif. P2P dimulai ulang (hanya STUN/direct).";
+          }
+        } catch (e) {
+          if (turnStatus) turnStatus.textContent = "Gagal memulai ulang P2P: " + (e?.message || e);
+        }
+      }
+    });
     window.addEventListener("callme:peer-server-status", (event) => {
       const status = event.detail?.status;
       document.getElementById("p2p-status")?.replaceChildren(
