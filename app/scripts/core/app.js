@@ -44,7 +44,7 @@
     btn?.setAttribute("aria-expanded", "false");
   }
 
-  const OVERLAY_PANELS = new Set(["profile", "admin", "language", "theme", "sound", "about", "location"]);
+  const OVERLAY_PANELS = new Set(["profile", "admin", "settings", "about", "location"]);
   const FULLSCREEN_PANELS = new Set(["login", "voice-call", "video-call"]);
   const isDesktopSplit = () => window.matchMedia("(min-width:900px)").matches;
 
