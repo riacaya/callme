@@ -9,72 +9,6 @@
       remoteReceived = false;
     const panel = (mode) =>
       document.querySelector(`[data-panel="${mode}-call"]`);
-    const isVoiceWidget = (mode) => mode === "voice" && window.matchMedia("(min-width:900px)").matches;
-    const showVoiceWidget = () => {
-      const view = panel("voice");
-      if (!view) return;
-      view.classList.add("voice-widget-active");
-      view.classList.remove("hidden");
-      if (!view.dataset.dragged) {
-        view.style.right = "20px";
-        view.style.bottom = "20px";
-        view.style.left = "auto";
-        view.style.top = "auto";
-      }
-    };
-    const hideVoiceWidget = () => {
-      const view = panel("voice");
-      if (!view) return;
-      view.classList.remove("voice-widget-active", "dragging");
-      view.classList.add("hidden");
-    };
-    // Drag widget panggilan suara (desktop)
-    (function initVoiceWidgetDrag() {
-      const view = panel("voice");
-      const handle = view?.querySelector(".voice-widget-drag");
-      if (!view || !handle) return;
-      let dragging = false, sx = 0, sy = 0, sl = 0, st = 0;
-      const onMove = (e) => {
-        if (!dragging) return;
-        const x = e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? sx;
-        const y = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? sy;
-        let left = sl + (x - sx);
-        let top = st + (y - sy);
-        const vw = window.innerWidth, vh = window.innerHeight;
-        const w = view.offsetWidth || 300, h = view.offsetHeight || 160;
-        left = Math.max(8, Math.min(left, vw - w - 8));
-        top = Math.max(8, Math.min(top, vh - h - 8));
-        view.style.left = left + "px";
-        view.style.top = top + "px";
-        view.style.right = "auto";
-        view.style.bottom = "auto";
-        view.dataset.dragged = "1";
-      };
-      const onUp = () => {
-        if (!dragging) return;
-        dragging = false;
-        view.classList.remove("dragging");
-        window.removeEventListener("pointermove", onMove);
-        window.removeEventListener("pointerup", onUp);
-      };
-      handle.addEventListener("pointerdown", (e) => {
-        if (!view.classList.contains("voice-widget-active")) return;
-        dragging = true;
-        view.classList.add("dragging");
-        const rect = view.getBoundingClientRect();
-        sx = e.clientX; sy = e.clientY; sl = rect.left; st = rect.top;
-        view.style.left = sl + "px"; view.style.top = st + "px";
-        view.style.right = "auto"; view.style.bottom = "auto";
-        try { handle.setPointerCapture(e.pointerId); } catch {}
-        window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", onUp);
-        e.preventDefault();
-      });
-    })();
-    const showCallView = (mode) => {
-      if (isVoiceWidget(mode)) showVoiceWidget();
-      else window.CallMeApp.show(`${mode}-call`);
-    };
     const setChatCallButtonsHidden = (hidden) => {
       document.querySelectorAll('[data-panel="chatroom"] [data-call]')
         .forEach((button) => { button.hidden = hidden; });
@@ -275,8 +209,7 @@
         callWasProcessed =
           session?.kind === "outgoing" ||
           (session?.kind === "incoming" && session.accepted),
-        returnPanel = session?.returnPanel || "friends",
-        voiceWidget = session?.voiceWidget === true;
+        returnPanel = session?.returnPanel || "friends";
       callEnded = true;
       try { session?.__cleanupAttempt?.(); } catch {}
       if (session?.answerTimer) clearTimeout(session.answerTimer);
@@ -290,8 +223,7 @@
       if (!call && !currentCall && !pendingIncoming) {
         setChatCallButtonsHidden(false);
         callSession = null;
-        if (voiceWidget) hideVoiceWidget();
-        else window.CallMeApp.show(returnPanel);
+        window.CallMeApp.show(returnPanel);
         return;
       }
       if (notify && target)
@@ -308,10 +240,6 @@
       stream = null;
       clearCallMedia();
       setChatCallButtonsHidden(false);
-      if (voiceWidget) {
-        hideVoiceWidget();
-        return;
-      }
       const hasActiveRoom = Boolean(window.CallMeChat?.activePeer?.());
       if (callWasProcessed && hasActiveRoom)
         window.CallMeApp.show("chatroom");
@@ -483,11 +411,11 @@
       if (!view || !local || !target) return;
       callEnded = false;
       remoteReceived = false;
-      const session = { kind: "outgoing", peerId: target, mode, returnPanel: "chatroom", accepted: true, logId: null, voiceWidget: isVoiceWidget(mode) };
+      const session = { kind: "outgoing", peerId: target, mode, returnPanel: "chatroom", accepted: true, logId: null };
       callSession = session;
       clearCallMedia();
       setChatCallButtonsHidden(true);
-      showCallView(mode);
+      window.CallMeApp.show(`${mode}-call`);
       const status = view.querySelector('[id$="-call-status"]'),
         name = view.querySelector(`#${mode}-call-name`);
       setIncomingControls(view, false);
@@ -627,7 +555,7 @@
         }
         // Setelah diterima, hanya tombol tutup merah yang tersisa dan tetap terpusat.
         setIncomingControls(view, false);
-        showCallView(mode);
+        window.CallMeApp.show(`${mode}-call`);
         setChatCallButtonsHidden(true);
         try {
           const localStream = await captureLocalStream(mode, status);
@@ -780,7 +708,6 @@
         returnPanel: originPanel,
         logId: incoming.metadata?.callLogId || "",
         accepted: false,
-        voiceWidget: isVoiceWidget(mode),
       };
       if (incoming.__pushOnly) {
         // Pemanggil push-only menyerah sendiri (~30 dtk) tanpa memberi tahu
@@ -835,7 +762,7 @@
         // Panggilan bisa ditutup selama lookup nama berlangsung. Jangan biarkan
         // handler lama menghidupkan panel panggilan kembali setelah finish().
         if (pendingIncoming?.incoming !== incoming) return;
-        showCallView(mode);
+        window.CallMeApp.show(`${mode}-call`);
         setIncomingControls(view, true);
         status.textContent = mode === "video" ? "Panggilan video masuk" : "Panggilan suara masuk";
         const tryAutoAnswer = () => {
@@ -859,17 +786,16 @@
             }
           }, 150);
         }
-        // Jaga panel dering tetap tampil (khusus mode panel layar penuh).
-        // Mode widget suara dikelola sendiri tanpa navigasi panel.
-        if (!callSession?.voiceWidget) {
-          const watchdog = setInterval(() => {
-            if (pendingIncoming?.incoming !== incoming || callEnded) {
-              clearInterval(watchdog);
-              return;
-            }
-            if (window.CallMeApp?.current?.() !== `${mode}-call`) window.CallMeApp.show(`${mode}-call`);
-          }, 1000);
-        }
+        // Jaga panel dering tetap tampil: init/session-restore/deep-link bisa
+        // berpindah panel tepat setelah show(). Selama dering belum berakhir,
+        // paksa kembali ke panel panggilan tiap detik.
+        const watchdog = setInterval(() => {
+          if (pendingIncoming?.incoming !== incoming || callEnded) {
+            clearInterval(watchdog);
+            return;
+          }
+          if (window.CallMeApp?.current?.() !== `${mode}-call`) window.CallMeApp.show(`${mode}-call`);
+        }, 1000);
         incoming.on("error", () => {
           if (pendingIncoming?.incoming === incoming) status.textContent = "Panggilan gagal";
         });
