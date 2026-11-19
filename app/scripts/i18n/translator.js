@@ -30,12 +30,14 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    const toggle = document.getElementById("language-toggle");
-    if (!toggle) return;
-    const box = toggle.closest(".language-setting");
-    if (box) {
-      box.innerHTML = '<strong class="language-heading">Bahasa</strong><button type="button" class="language-option" data-language="id"><span><i class="language-flag flag-id" aria-hidden="true"></i>Indonesia</span><span class="language-check">✓</span></button><button type="button" class="language-option" data-language="en"><span><i class="language-flag flag-en" aria-hidden="true"></i>English</span><span class="language-check">✓</span></button>';
-    }
+    const boxes = document.querySelectorAll(".language-setting");
+    if (!boxes.length) return;
+    boxes.forEach((box) => {
+      // Isi opsi bahasa jika belum ada (kompatibel dengan panel lama & baru).
+      if (!box.querySelector(".language-option")) {
+        box.innerHTML = '<strong class="language-heading">Bahasa</strong><button type="button" class="language-option" data-language="id"><span><i class="language-flag flag-id" aria-hidden="true"></i>Indonesia</span><span class="language-check">✓</span></button><button type="button" class="language-option" data-language="en"><span><i class="language-flag flag-en" aria-hidden="true"></i>English</span><span class="language-check">✓</span></button>';
+      }
+    });
     const initialLanguage = localStorage.getItem("callme-language") || "id";
     const updateLanguage = (language) => {
       document.querySelectorAll(".language-option").forEach((button) => { button.classList.toggle("is-active", button.dataset.language === language); });
