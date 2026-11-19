@@ -44,7 +44,7 @@
     btn?.setAttribute("aria-expanded", "false");
   }
 
-  const OVERLAY_PANELS = new Set(["profile", "admin", "language", "theme", "about", "location"]);
+  const OVERLAY_PANELS = new Set(["profile", "admin", "language", "theme", "sound", "about", "location"]);
   const FULLSCREEN_PANELS = new Set(["login", "voice-call", "video-call"]);
   const isDesktopSplit = () => window.matchMedia("(min-width:900px)").matches;
 
@@ -263,6 +263,7 @@
         { id: "rail-admin", iconName: "admin-panel-settings", panel: "admin", label: "Administrator", adminOnly: true },
         { id: "rail-language", iconName: "language", panel: "language", label: "Bahasa" },
         { id: "rail-theme", iconName: "theme", panel: "theme", label: "Tema" },
+        { id: "rail-sound", iconName: "notifications", panel: "sound", label: "Suara & Notifikasi" },
         { id: "rail-export", iconName: "package", action: "export", label: "Ekspor Chat" },
         { id: "rail-about", iconName: "info", panel: "about", label: "About" },
         { sep: true, bottom: true },

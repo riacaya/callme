@@ -205,6 +205,7 @@
     };
     const finish = (notify = true) => {
       if (callEnded) return;
+      try { window.CallMeSound?.stopRingtone?.(); } catch (_) {}
       const session = callSession,
         callWasProcessed =
           session?.kind === "outgoing" ||
@@ -504,6 +505,7 @@
           }
         }
         window.CallMeAndroid?.cancelCall?.();
+        try { window.CallMeSound?.stopRingtone?.(); } catch (_) {}
         finish(false);
       }));
     document.querySelectorAll("[data-call-accept]").forEach((button) => {
@@ -518,6 +520,7 @@
           return;
         const { incoming, mode } = pendingIncoming;
         const session = callSession;
+        try { window.CallMeSound?.stopRingtone?.(); } catch (_) {}
         if (session) session.accepted = true;
         await activateCallRoom(incoming.peer || incoming.peerId);
         if (pendingIncoming?.incoming !== incoming || callSession !== session || callEnded) return;
@@ -765,6 +768,7 @@
         window.CallMeApp.show(`${mode}-call`);
         setIncomingControls(view, true);
         status.textContent = mode === "video" ? "Panggilan video masuk" : "Panggilan suara masuk";
+        try { window.CallMeSound?.startRingtone?.(); } catch (_) {}
         const tryAutoAnswer = () => {
           if (!window.__callmeAutoAnswerPending) return false;
           const btn = view.querySelector(`[data-call-accept="${mode}"]`);

@@ -425,6 +425,7 @@ video::-webkit-media-controls-panel { display:none !important; }
   .panel.overlay-open[data-panel="about"],
   .panel.overlay-open[data-panel="language"],
   .panel.overlay-open[data-panel="theme"],
+  .panel.overlay-open[data-panel="sound"],
   .panel.overlay-open[data-panel="admin"] {
     display: flex !important;
     flex-direction: column;
@@ -693,10 +694,26 @@ video::-webkit-media-controls-panel { display:none !important; }
           <button class="setting-action" data-theme="dark">🌙 Dark</button>
         </div>
       </section>
+      <section data-panel="sound" class="panel panel-sound hidden">
+        <header class="panel-header"><button class="panel-back" data-back="friends" aria-label="Kembali"><</button><h1><svg viewBox="0 -960 960 960" width="20" height="20" fill="currentColor" aria-hidden="true" style="vertical-align:-3px;margin-right:6px"><path d="M190-200q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h50v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v22q81 17 130.5 83.5T720-564v304h50q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H190Zm290-302Zm0 422q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM300-260h360v-304q0-75-52.5-127.5T480-744q-75 0-127.5 52.5T300-564v304Z"/></svg>Suara &amp; Notifikasi</h1><button class="panel-close" type="button" data-overlay-close aria-label="Tutup">x</button></header>
+        <div class="panel-content" id="sound-settings-content">
+          <h2>Nada dering panggilan</h2>
+          <label class="setting-action" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
+            <span>Putar nada dering saat ada panggilan masuk</span>
+            <input type="checkbox" id="sound-call-ringtone" checked>
+          </label>
+          <h2>Nada pesan</h2>
+          <label class="setting-action" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
+            <span>Putar nada saat pesan baru diterima</span>
+            <input type="checkbox" id="sound-message-tone" checked>
+          </label>
+          <p style="margin-top:14px;font-size:13px;color:var(--muted)">Pengaturan ini berlaku untuk suara di dalam aplikasi. Notifikasi latar belakang dapat mengikuti pengaturan suara sistem/browser.</p>
+        </div>
+      </section>
           <div id="main-menu-backdrop" class="main-menu-backdrop" aria-hidden="true"></div>
       <nav id="main-menu" class="main-menu panel panel-settings" aria-hidden="true" aria-label="Pengaturan">
         <div class="main-menu-header"><button type="button" id="main-menu-close" class="main-menu-close main-menu-back" aria-label="Kembali">&lt;</button><span class="main-menu-title"><span class="main-menu-title-icon" aria-hidden="true">⚙</span> Pengaturan</span><span class="main-menu-header-spacer" aria-hidden="true"></span></div>
-        <div class="main-menu-body panel-content settings-menu-content"><div class="setting-group"><button class="setting-action" data-open-panel="profile"><span class="setting-ico" data-ico="person"></span> Edit Profil</button><button class="setting-action admin-only" data-open-panel="admin" hidden><span class="setting-ico" data-ico="admin-panel-settings"></span> Administrator</button></div><div class="setting-group"><div class="language-setting"><label for="language-toggle">Bahasa</label><button type="button" id="language-toggle" class="language-toggle" aria-label="Ganti bahasa">EN</button></div><h2>Theme</h2><button class="setting-action" data-theme="system">💻 Sistem (Ikuti PC)</button><button class="setting-action" data-theme="senja">🌅 Senja</button><button class="setting-action" data-theme="natural">🌿 Natural</button><button class="setting-action" data-theme="dark">🌙 Dark</button></div><div class="setting-group"><button class="setting-action" id="export-chat-button" type="button"><span class="setting-ico" data-ico="package"></span> Ekspor Chat</button><p id="export-chat-status" class="export-chat-status" role="status" aria-live="polite"></p></div><div class="setting-group"><button class="setting-action" data-open-panel="about"><span class="setting-ico" data-ico="info"></span> About</button><button class="setting-action" data-logout><span class="setting-ico" data-ico="logout"></span> Log out</button></div></div>
+        <div class="main-menu-body panel-content settings-menu-content"><div class="setting-group"><button class="setting-action" data-open-panel="profile"><span class="setting-ico" data-ico="person"></span> Edit Profil</button><button class="setting-action admin-only" data-open-panel="admin" hidden><span class="setting-ico" data-ico="admin-panel-settings"></span> Administrator</button></div><div class="setting-group"><div class="language-setting"><label for="language-toggle">Bahasa</label><button type="button" id="language-toggle" class="language-toggle" aria-label="Ganti bahasa">EN</button></div><h2>Theme</h2><button class="setting-action" data-theme="system">💻 Sistem (Ikuti PC)</button><button class="setting-action" data-theme="senja">🌅 Senja</button><button class="setting-action" data-theme="natural">🌿 Natural</button><button class="setting-action" data-theme="dark">🌙 Dark</button></div><div class="setting-group"><button class="setting-action" id="export-chat-button" type="button"><span class="setting-ico" data-ico="package"></span> Ekspor Chat</button><p id="export-chat-status" class="export-chat-status" role="status" aria-live="polite"></p></div><div class="setting-group"><button class="setting-action" data-open-panel="sound"><span class="setting-ico" data-ico="notifications"></span> Suara &amp; Notifikasi</button><button class="setting-action" data-open-panel="about"><span class="setting-ico" data-ico="info"></span> About</button><button class="setting-action" data-logout><span class="setting-ico" data-ico="logout"></span> Log out</button></div></div>
       </nav>
       <style id="main-menu-style">
         .panel-friends .app-header,.app-header{display:flex!important;align-items:center!important;justify-content:flex-start!important}
@@ -776,6 +793,7 @@ video::-webkit-media-controls-panel { display:none !important; }
   <script src="scripts/p2p/transport.js?v=20261012-1540"></script>
   <script src="scripts/p2p/facade.js?v=20261012-1540"></script>
   <script src="scripts/media/image.js"></script><script src="scripts/p2p/presence.js"></script>
+  <script src="scripts/core/sound.js"></script>
   <script src="scripts/media/calls.js?v=20261116-0130"></script>
   <script src="scripts/core/file-transfer.js?v=20261012-1540"></script>
   <script src="scripts/media/attachments.js"></script>

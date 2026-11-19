@@ -881,7 +881,9 @@
       const existingItem = messages.querySelector(`[data-message-id="${CSS.escape(row.id)}"]`);
       if (!existingItem) {
         render(row);
-        if (row.kind !== "call-log") tone(false);
+        if (row.kind !== "call-log") {
+          try { window.CallMeSound?.playMessageTone?.(); } catch (_) {}
+        }
       }
       void (async () => {
         try {

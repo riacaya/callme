@@ -68,6 +68,25 @@
       document.body.dataset.theme = theme;
       markTheme(theme);
     }
+
+    // Suara & notifikasi
+    const applySoundUi = () => {
+      const s = window.CallMeSound?.settings?.() || { callRingtone: true, messageTone: true };
+      const ring = document.getElementById("sound-call-ringtone");
+      const msg = document.getElementById("sound-message-tone");
+      if (ring) ring.checked = s.callRingtone !== false;
+      if (msg) msg.checked = s.messageTone !== false;
+    };
+    applySoundUi();
+    document.getElementById("sound-call-ringtone")?.addEventListener("change", (e) => {
+      window.CallMeSound?.set?.({ callRingtone: !!e.target.checked });
+    });
+    document.getElementById("sound-message-tone")?.addEventListener("change", (e) => {
+      window.CallMeSound?.set?.({ messageTone: !!e.target.checked });
+      if (e.target.checked) {
+        try { window.CallMeSound?.playMessageTone?.(); } catch (_) {}
+      }
+    });
     window.addEventListener("callme:peer-server-status", (event) => {
       const status = event.detail?.status;
       document.getElementById("p2p-status")?.replaceChildren(
