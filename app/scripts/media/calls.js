@@ -206,6 +206,14 @@
     const finish = (notify = true) => {
       if (callEnded) return;
       try { window.CallMeSound?.stopRingtone?.(); } catch (_) {}
+      try { window.CallMeAndroid?.cancelCall?.(); } catch (_) {}
+      try {
+        navigator.serviceWorker?.ready?.then((reg) =>
+          reg.getNotifications?.().then((list) =>
+            list.forEach((n) => { if (n?.data?.kind === "call") n.close(); })
+          )
+        ).catch(() => {});
+      } catch (_) {}
       const session = callSession,
         callWasProcessed =
           session?.kind === "outgoing" ||
@@ -278,6 +286,7 @@
         });
         if (!attempt) {
           status.textContent = "Panggilan gagal dimulai. Pastikan koneksi P2P siap lalu coba lagi.";
+          if (!session.waitingForAnswer && callSession === session && !callEnded) finish(false);
           return false;
         }
         currentCall = attempt;
@@ -397,6 +406,7 @@
         return true;
       } catch (error) {
         status.textContent = mediaErrorMessage(error, "Gagal memulai panggilan");
+        if (!session.waitingForAnswer && callSession === session && !callEnded) finish(false);
         return false;
       }
     };
