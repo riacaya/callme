@@ -24,6 +24,8 @@
     const loadButton = document.getElementById("admin-load-users");
     const usersStatus = document.getElementById("admin-users-status");
     const usersList = document.getElementById("admin-users");
+    const noTurnToggle = document.getElementById("admin-no-turn-toggle");
+    const noTurnStatus = document.getElementById("admin-no-turn-status");
     if (!adminButtons.length || !adminPanel || !turnButton || !turnProgressBar || !loadButton || !usersList) return;
 
     function updateAccess(user = currentUser()) {
@@ -205,6 +207,38 @@
       clearTimeout(turnCleanupTimer);
       try { turnTestPeer?.destroy(); } catch {}
       turnTestPeer = null;
+    });
+
+    function syncNoTurnUi() {
+      if (!noTurnToggle) return;
+      const on = localStorage.getItem("callme-v2-no-turn") === "1";
+      noTurnToggle.textContent = on ? "Mode tanpa TURN: Aktif" : "Mode tanpa TURN: Mati";
+      if (noTurnStatus) {
+        noTurnStatus.textContent = on
+          ? "Aktif: koneksi baru hanya memakai STUN/direct (tanpa relay TURN). Jika direct tidak mungkin, koneksi bisa gagal."
+          : "Mati: koneksi memakai STUN + TURN (normal). Aktifkan untuk uji koneksi tanpa relay.";
+      }
+    }
+    syncNoTurnUi();
+    noTurnToggle?.addEventListener("click", () => {
+      if (!isAdmin(currentUser())) return;
+      const next = localStorage.getItem("callme-v2-no-turn") === "1" ? "0" : "1";
+      localStorage.setItem("callme-v2-no-turn", next);
+      syncNoTurnUi();
+      const user = currentUser();
+      if (user && window.CallMeTransport) {
+        try {
+          window.CallMeTransport.stop();
+          window.CallMeTransport.start(user);
+          if (noTurnStatus) {
+            noTurnStatus.textContent = (next === "1")
+              ? "Mode tanpa TURN aktif. P2P dimulai ulang (hanya STUN/direct). Coba hubungkan teman untuk menguji."
+              : "Mode tanpa TURN mati. P2P dimulai ulang dengan STUN + TURN (normal).";
+          }
+        } catch (e) {
+          if (noTurnStatus) noTurnStatus.textContent = "Gagal memulai ulang P2P: " + (e?.message || e);
+        }
+      }
     });
 
     function createUserRow(row) {

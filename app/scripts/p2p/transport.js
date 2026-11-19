@@ -28,11 +28,13 @@
     presenceTimers = new Map(),
     routeByPeer = new Map(),
     listeners = new Set();
-  const TURN_SERVERS = [
+  const STUN_SERVERS = [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun.relay.metered.ca:80" },
+  ];
+  const TURN_ONLY_SERVERS = [
     {
       urls: "turn:global.relay.metered.ca:80",
       username: "466494188ac3580fb1c6df34",
@@ -54,6 +56,10 @@
       credential: "f8Qc+SUXdyhuVIgB",
     },
   ];
+  const isNoTurnMode = () => {
+    try { return localStorage.getItem("callme-v2-no-turn") === "1"; } catch { return false; }
+  };
+  const iceServers = () => isNoTurnMode() ? [...STUN_SERVERS] : [...STUN_SERVERS, ...TURN_ONLY_SERVERS];
   const normalizePeerIdentity = (value) =>
     window.CallMeIdentity?.withoutPeerPrefix?.(value) ||
     window.CallMeApp?.normalize?.(value) ||
@@ -104,7 +110,7 @@
       instance = new Peer(id, {
         debug: 3,
         config: {
-          iceServers: TURN_SERVERS,
+          iceServers: iceServers(),
           iceTransportPolicy: "all",
           sdpSemantics: "unified-plan",
           iceCandidatePoolSize: 2,
