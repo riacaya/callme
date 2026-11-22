@@ -17,6 +17,8 @@
       element.srcObject = mediaStream;
       element.autoplay = true;
       element.playsInline = true;
+      if (mediaStream && element && element.id === "video-remote") element.classList.add("has-stream");
+      if (!mediaStream && element) element.classList.remove("has-stream");
       element.play?.().catch(() => {});
     };
     const clearCallMedia = () => {
