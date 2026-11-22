@@ -51,7 +51,8 @@ button{cursor:pointer;border:0}
 @media (min-width:900px){
   .panel.overlay-open .panel-back,.friend-profile-col.overlay-open .friend-profile-back{display:none!important}
   .panel.overlay-open .panel-close,.friend-profile-col.overlay-open .panel-close{display:grid!important}
-  .panel.overlay-open::before,.friend-profile-col.overlay-open::before{content:"";position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:-1}
+  body:has(.panel.overlay-open:not(.hidden)),body:has(.friend-profile-col.overlay-open){overflow:hidden}
+  body:has(.panel.overlay-open:not(.hidden))::before,body:has(.friend-profile-col.overlay-open)::before{content:"";position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:35;pointer-events:none}
 }
 @media (max-width:899px){
   .panel-close{display:none!important}
