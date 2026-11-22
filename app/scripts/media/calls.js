@@ -159,6 +159,32 @@
         String(peerId || "").replace(/^cm-/i, "").toLowerCase() ||
         "Panggilan masuk";
     };
+    const ensureCallBg = (stage) => {
+      if (!stage) return null;
+      let bg = stage.querySelector(".call-bg");
+      if (!bg) {
+        bg = document.createElement("div");
+        bg.className = "call-bg";
+        bg.setAttribute("aria-hidden", "true");
+        const img = document.createElement("div");
+        img.className = "call-bg-img";
+        bg.appendChild(img);
+        stage.prepend(bg);
+      }
+      return bg;
+    };
+    const setCallBackground = async (peerId, view) => {
+      const stage = view?.querySelector(".voice-call-stage, .video-call-stage");
+      const bg = ensureCallBg(stage);
+      if (!bg) return;
+      const img = bg.querySelector(".call-bg-img");
+      const contact = await refreshContactProfile(peerId);
+      const photo = contact?.profile_photo || "";
+      if (img) img.style.backgroundImage = photo ? `url("${String(photo).replace(/"/g, '%22')}")` : "";
+    };
+    const clearCallBackgrounds = () => {
+      document.querySelectorAll(".panel-call .call-bg-img").forEach((img) => { img.style.backgroundImage = ""; });
+    };
     const setVoiceAvatar = async (peerId) => {
       const avatar = document.getElementById("voice-avatar");
       if (!avatar) return;
@@ -168,6 +194,7 @@
       image.alt = contact?.display_name || contact?.phone || String(peerId || "");
       image.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:50%";
       avatar.replaceChildren(image);
+      void setCallBackground(peerId, document.querySelector('[data-panel="voice-call"]'));
     };
     const setVideoAvatar = async (peerId, view) => {
       if (!view) return;
@@ -186,6 +213,7 @@
       image.alt = contact?.display_name || contact?.phone || String(peerId || "");
       image.style.cssText = "width:100%;height:100%;object-fit:cover";
       avatar.replaceChildren(image);
+      void setCallBackground(peerId, view);
       avatar.hidden = false;
     };
     const activateCallRoom = async (peerId) => {
@@ -249,6 +277,7 @@
       } catch {}
       stream?.getTracks().forEach((track) => track.stop());
       stream = null;
+      clearCallBackgrounds();
       clearCallMedia();
       setChatCallButtonsHidden(false);
       const hasActiveRoom = Boolean(window.CallMeChat?.activePeer?.());
@@ -426,6 +455,7 @@
       remoteReceived = false;
       const session = { kind: "outgoing", peerId: target, mode, returnPanel: "chatroom", accepted: true, logId: null };
       callSession = session;
+      clearCallBackgrounds();
       clearCallMedia();
       setChatCallButtonsHidden(true);
       window.CallMeApp.show(`${mode}-call`);
