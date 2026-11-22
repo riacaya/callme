@@ -27,6 +27,7 @@
             attached.getTracks().forEach((track) => track.stop());
           element.pause?.();
           element.srcObject = null;
+          element.classList.remove("has-stream");
         });
     };
     const roomIdForPeer = (peerId) => {
@@ -112,6 +113,7 @@
       element.closest(".video-call-stage")?.querySelector("#video-call-name")?.toggleAttribute("hidden", true);
       element.closest(".video-call-stage")?.querySelector(".video-call-avatar")?.setAttribute("hidden", "");
       element.muted = false;
+      if (element.id === "video-remote") element.classList.add("has-stream");
       status.textContent = "Tersambung";
       setConnectedControls(element.closest(".panel-call, .video-call-stage, .voice-call-stage")?.closest(".panel-call") || element.closest("[data-panel]"), true);
     };
