@@ -7,6 +7,21 @@
     try { host.postMessage(JSON.stringify(Object.assign({ type: type }, payload || {}))); } catch (_) {}
   }
 
+  // Expose speaker bridge for web app (calls.js looks for CallMeAndroid.setSpeakerphone)
+  try {
+    var bridge = window.CallMeAndroid || {};
+    if (typeof bridge.setSpeakerphone !== "function") {
+      bridge.setSpeakerphone = function (enabled) { post("set-speaker", { enabled: !!enabled }); };
+    }
+    if (typeof bridge.setSpeaker !== "function") {
+      bridge.setSpeaker = function (enabled) { post("set-speaker", { enabled: !!enabled }); };
+    }
+    if (typeof bridge.toggleSpeaker !== "function") {
+      bridge.toggleSpeaker = function (enabled) { post("set-speaker", { enabled: !!enabled }); };
+    }
+    window.CallMeAndroid = bridge;
+  } catch (_) {}
+
   function senderName(peerId) {
     var id = String(peerId || "").replace(/^cm-/i, "");
     return id || "CallMe";
