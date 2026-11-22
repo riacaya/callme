@@ -51,6 +51,7 @@ button{cursor:pointer;border:0}
 @media (min-width:900px){
   .panel.overlay-open .panel-back,.friend-profile-col.overlay-open .friend-profile-back{display:none!important}
   .panel.overlay-open .panel-close,.friend-profile-col.overlay-open .panel-close{display:grid!important}
+  .panel.overlay-open::before,.friend-profile-col.overlay-open::before{content:"";position:fixed;inset:0;background:rgba(0,0,0,.18);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:-1}
 }
 @media (max-width:899px){
   .panel-close{display:none!important}
