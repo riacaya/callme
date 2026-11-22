@@ -296,8 +296,7 @@
       const speaker = view?.querySelector("[data-call-speaker]");
       if (mute) mute.hidden = !connected;
       if (speaker) {
-        const canSpeaker = !!(window.CallMeAndroid?.setSpeakerphone || window.CallMeAndroid?.setSpeaker || window.CallMeAndroid?.toggleSpeaker);
-        speaker.hidden = !connected || !canSpeaker;
+        speaker.hidden = !connected;
       }
     };
     const resetCallControls = (view) => {
