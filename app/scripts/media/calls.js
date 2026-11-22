@@ -113,7 +113,9 @@
       element.closest(".video-call-stage")?.querySelector("#video-call-name")?.toggleAttribute("hidden", true);
       element.closest(".video-call-stage")?.querySelector(".video-call-avatar")?.setAttribute("hidden", "");
       element.muted = false;
-      if (element.id === "video-remote") element.classList.add("has-stream");
+      if (element.tagName === "VIDEO" || element.id === "video-remote") element.classList.add("has-stream");
+      const vr = element.closest(".video-call-stage")?.querySelector("#video-remote");
+      if (vr && vr.srcObject) vr.classList.add("has-stream");
       status.textContent = "Tersambung";
       setConnectedControls(element.closest(".panel-call, .video-call-stage, .voice-call-stage")?.closest(".panel-call") || element.closest("[data-panel]"), true);
     };
