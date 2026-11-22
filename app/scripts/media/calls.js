@@ -289,6 +289,10 @@
     };
     const setIncomingControls = (view, incoming) => {
       view?.querySelector("[data-call-accept]")?.toggleAttribute("hidden", !incoming);
+      const reject = view?.querySelector("[data-call-reject]");
+      const rejectLbl = reject?.querySelector(".call-control-label");
+      if (rejectLbl) rejectLbl.textContent = incoming ? "Tolak" : "Akhiri";
+      if (reject) reject.setAttribute("aria-label", incoming ? "Tolak panggilan" : "Akhiri panggilan");
       if (incoming) setConnectedControls(view, false);
     };
     const setConnectedControls = (view, connected) => {
@@ -307,14 +311,20 @@
         mute.classList.remove("is-muted");
         mute.setAttribute("aria-pressed", "false");
         mute.setAttribute("aria-label", "Bisukan mikrofon");
-        mute.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm0-240Zm-40 520v-123q-104-14-172-93t-68-184h80q0 83 58.5 141.5T480-320q83 0 141.5-58.5T680-520h80q0 105-68 184t-172 93v123h-80Zm40-360q17 0 28.5-11.5T520-520v-240q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760v240q0 17 11.5 28.5T480-480Z"/></svg>';
+        const micIcon = mute.querySelector(".call-control-icon"); if (micIcon) micIcon.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm0-240Zm-40 520v-123q-104-14-172-93t-68-184h80q0 83 58.5 141.5T480-320q83 0 141.5-58.5T680-520h80q0 105-68 184t-172 93v123h-80Zm40-360q17 0 28.5-11.5T520-520v-240q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760v240q0 17 11.5 28.5T480-480Z"/></svg>';
+        const micLbl = mute.querySelector(".call-control-label"); if (micLbl) micLbl.textContent = "Bisukan";
       }
       if (speaker) {
         speaker.classList.remove("is-active");
         speaker.setAttribute("aria-pressed", "false");
         speaker.setAttribute("aria-label", "Nyalakan speaker");
-        speaker.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M560-131v-82q90-26 145-100t55-168q0-94-55-168T560-749v-82q124 28 202 125.5T840-481q0 127-78 224.5T560-131ZM120-360v-240h160l200-200v640L280-360H120Zm440 40v-322q47 22 73.5 66t26.5 96q0 51-26.5 94.5T560-320ZM400-606l-86 86H200v80h114l86 86v-252ZM300-480Z"/></svg>';
+        const spkIcon = speaker.querySelector(".call-control-icon"); if (spkIcon) spkIcon.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M560-131v-82q90-26 145-100t55-168q0-94-55-168T560-749v-82q124 28 202 125.5T840-481q0 127-78 224.5T560-131ZM120-360v-240h160l200-200v640L280-360H120Zm440 40v-322q47 22 73.5 66t26.5 96q0 51-26.5 94.5T560-320ZM400-606l-86 86H200v80h114l86 86v-252ZM300-480Z"/></svg>';
+        const spkLbl = speaker.querySelector(".call-control-label"); if (spkLbl) spkLbl.textContent = "Speaker";
       }
+      const reject = view?.querySelector("[data-call-reject]");
+      const rejectLbl = reject?.querySelector(".call-control-label");
+      if (rejectLbl) rejectLbl.textContent = "Tolak";
+      if (reject) reject.setAttribute("aria-label", "Tolak panggilan");
       try { window.CallMeAndroid?.setSpeakerphone?.(false); } catch (_) {}
     };
     // P2P media dimulai setelah status penerima aktif atau setelah Jawab FCM.
@@ -585,10 +595,14 @@
         finish(true);
       }));
     document.querySelectorAll("[data-call-accept]").forEach((button) => {
-      button.innerHTML = '<svg viewBox="0 -960 960 960" width="28" height="28" fill="#fff" aria-hidden="true"><path d="M795-120q-116 0-236.5-56T335-335Q232-438 176-558.5T120-795q0-19.29 12.86-32.14Q145.71-840 165-840h140q14 0 24 10t14 25l26.93 125.64Q372-665 369.5-653.5t-10.73 19.73L259-533q26 44 55 82t64 72q37 38 78 69.5t86 55.5l95-98q10-11 23.15-15 13.15-4 25.85-2l119 26q15 4 25 16.04 10 12.05 10 26.96v135q0 19.29-12.86 32.14Q814.29-120 795-120ZM229-588l81-82-23-110H180q2 42 13.5 88.5T229-588Zm369 363q41 19 89 31t93 14v-107l-103-21-79 83ZM229-588Zm369 363Z"/></svg>';
+      const icon = button.querySelector(".call-control-icon");
+      if (icon) icon.innerHTML = '<svg viewBox="0 -960 960 960" width="28" height="28" fill="#fff" aria-hidden="true"><path d="M795-120q-116 0-236.5-56T335-335Q232-438 176-558.5T120-795q0-19.29 12.86-32.14Q145.71-840 165-840h140q14 0 24 10t14 25l26.93 125.64Q372-665 369.5-653.5t-10.73 19.73L259-533q26 44 55 82t64 72q37 38 78 69.5t86 55.5l95-98q10-11 23.15-15 13.15-4 25.85-2l119 26q15 4 25 16.04 10 12.05 10 26.96v135q0 19.29-12.86 32.14Q814.29-120 795-120ZM229-588l81-82-23-110H180q2 42 13.5 88.5T229-588Zm369 363q41 19 89 31t93 14v-107l-103-21-79 83ZM229-588Zm369 363Z"/></svg>';
+      const lbl = button.querySelector(".call-control-label"); if (lbl) lbl.textContent = "Terima";
     });
     document.querySelectorAll("[data-call-reject]").forEach((button) => {
-      button.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="#fff" aria-hidden="true"><path d="m136-306-94-94q-9-9-8.5-21t8.5-22q82-96 197-146.5T480-640q126 0 241 50.5T918-443q8 10 8.5 22t-8.5 21l-94 94q-8 8-23 9t-24-6l-114-85q-6-4.5-9-10.5t-3-13.5v-139q-42-16-85.5-22.5T480-580q-42 0-85.5 6.5T309-551v139q0 7.5-3 13.5t-9 10.5l-114.19 85.28q-11.81 8.72-24.5 7.8-12.68-.93-22.31-11.08Zm108-220q-38 19-73 45.5T104-424l57 59 83-61v-100Zm467-4v98l87 66 58-58q-32-33-68.5-58.5T711-530Zm-467 4Zm467-4Z"/></svg>';
+      const icon = button.querySelector(".call-control-icon");
+      if (icon) icon.innerHTML = '<svg viewBox="0 -960 960 960" width="24" height="24" fill="#fff" aria-hidden="true"><path d="m136-306-94-94q-9-9-8.5-21t8.5-22q82-96 197-146.5T480-640q126 0 241 50.5T918-443q8 10 8.5 22t-8.5 21l-94 94q-8 8-23 9t-24-6l-114-85q-6-4.5-9-10.5t-3-13.5v-139q-42-16-85.5-22.5T480-580q-42 0-85.5 6.5T309-551v139q0 7.5-3 13.5t-9 10.5l-114.19 85.28q-11.81 8.72-24.5 7.8-12.68-.93-22.31-11.08Zm108-220q-38 19-73 45.5T104-424l57 59 83-61v-100Zm467-4v98l87 66 58-58q-32-33-68.5-58.5T711-530Zm-467 4Zm467-4Z"/></svg>';
+      const lbl = button.querySelector(".call-control-label"); if (lbl) lbl.textContent = "Tolak";
     });
     document.querySelectorAll("[data-call-mute]").forEach((button) =>
       button.addEventListener("click", () => {
@@ -601,9 +615,11 @@
         button.classList.toggle("is-muted", isMuted);
         button.setAttribute("aria-pressed", isMuted ? "true" : "false");
         button.setAttribute("aria-label", isMuted ? "Aktifkan mikrofon" : "Bisukan mikrofon");
-        button.innerHTML = isMuted
+        const iconEl = button.querySelector(".call-control-icon");
+        if (iconEl) iconEl.innerHTML = isMuted
           ? '<svg viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="m710-362-58-58q14-23 21-48t7-52h80q0 44-13 83.5T710-362ZM480-594Zm112 112-72-72v-206q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760v126l-80-80v-46q0-50 35-85t85-35q50 0 85 35t35 85v240q0 11-2.5 20t-5.5 18ZM440-120v-123q-104-14-172-93t-68-184h80q0 83 58.5 141.5T480-320q34 0 64.5-10.5T600-360l57 57q-29 23-63.5 39T520-243v123h-80Zm352 64L56-792l56-56 736 736-56 56Z"/></svg>'
           : '<svg viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm0-240Zm-40 520v-123q-104-14-172-93t-68-184h80q0 83 58.5 141.5T480-320q83 0 141.5-58.5T680-520h80q0 105-68 184t-172 93v123h-80Zm40-360q17 0 28.5-11.5T520-520v-240q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760v240q0 17 11.5 28.5T480-480Z"/></svg>';
+        const lblEl = button.querySelector(".call-control-label"); if (lblEl) lblEl.textContent = isMuted ? "Bunyikan" : "Bisukan";
       }),
     );
     document.querySelectorAll("[data-call-speaker]").forEach((button) =>
