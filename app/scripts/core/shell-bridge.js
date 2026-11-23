@@ -27,6 +27,31 @@
     return id || "CallMe";
   }
 
+  function shrinkPhoto(src, max, cb) {
+    try {
+      if (!src || typeof src !== "string") return cb("");
+      if (src.indexOf("data:image") !== 0) return cb(src.length > 300000 ? "" : src);
+      if (src.length < 120000) return cb(src);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var w = img.width || max, h = img.height || max;
+          var scale = Math.min(1, max / Math.max(w, h));
+          var cw = Math.max(1, Math.round(w * scale));
+          var ch = Math.max(1, Math.round(h * scale));
+          var c = document.createElement("canvas");
+          c.width = cw; c.height = ch;
+          var ctx = c.getContext("2d");
+          ctx.drawImage(img, 0, 0, cw, ch);
+          cb(c.toDataURL("image/jpeg", 0.72));
+        } catch (_) { cb(""); }
+      };
+      img.onerror = function () { cb(""); };
+      img.src = src;
+      setTimeout(function () { cb(src.length < 300000 ? src : ""); }, 800);
+    } catch (_) { cb(""); }
+  }
+
   window.addEventListener("callme:incoming-call", function (event) {
     var incoming = event && event.detail;
     if (!incoming) return;
@@ -37,17 +62,18 @@
     try {
       var prof = window.CallMeProfileRepository && window.CallMeProfileRepository.read && window.CallMeProfileRepository.read(peer);
       photo = String((prof && (prof.profile_photo || prof.photo_url)) || "");
-      if (photo.length > 250000) photo = "";
       var dn = String((prof && (prof.display_name || prof.name)) || "").trim();
       if (dn) name = dn;
     } catch (_) {}
-    post("incoming-call", {
-      peerId: peer,
-      callMode: video ? "video" : "voice",
-      title: "Panggilan masuk",
-      body: (video ? "Panggilan video" : "Panggilan suara") + " dari " + name,
-      name: name,
-      photo: photo
+    shrinkPhoto(photo, 128, function (smallPhoto) {
+      post("incoming-call", {
+        peerId: peer,
+        callMode: video ? "video" : "voice",
+        title: "Panggilan masuk",
+        body: (video ? "Panggilan video" : "Panggilan suara") + " dari " + name,
+        name: name,
+        photo: smallPhoto || ""
+      });
     });
   });
 
