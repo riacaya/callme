@@ -19,6 +19,7 @@
     if (typeof bridge.toggleSpeaker !== "function") {
       bridge.toggleSpeaker = function (enabled) { post("set-speaker", { enabled: !!enabled }); };
     }
+    bridge.__shell = true;
     window.CallMeAndroid = bridge;
   } catch (_) {}
 

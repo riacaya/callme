@@ -910,7 +910,7 @@
         setIncomingControls(view, true);
         status.textContent = mode === "video" ? "Panggilan video masuk" : "Panggilan suara masuk";
         // APK/native menangani nada dering sendiri; hindari nada ganda di app.
-        try { if (!window.CallMeAndroid) window.CallMeSound?.startRingtone?.(); } catch (_) {}
+        try { if (!window.CallMeAndroid || window.CallMeAndroid.__shell) window.CallMeSound?.startRingtone?.(); } catch (_) {}
         const tryAutoAnswer = () => {
           if (!window.__callmeAutoAnswerPending) return false;
           const btn = view.querySelector(`[data-call-accept="${mode}"]`);
