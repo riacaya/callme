@@ -2,6 +2,8 @@
   let peer = null,
     lastIdentity = "",
     registerTimer = null,
+    turnEscalated = false,
+    directFailCount = 0,
     // stop() harus mematikan semua event dari peer lama: reconnect yang terjadi
     // saat destroy membuka socket baru yang dipegang server sebagai "cm-<user>"
     // yatim — login berikutnya selalu kena unavailable-id sampai refresh.
@@ -80,7 +82,10 @@
     turnEscalated = true;
     console.warn("[transport] escalating to TURN after repeated direct failures", reason || "");
     publishPeerServerStatus("connecting", { reason: "turn-escalation", escalateReason: reason || "" });
-    try { start(lastIdentity); } catch (e) { console.warn("[transport] TURN escalation restart failed", e); }
+    try {
+      if (peer && !peer.destroyed) { peer.__disposed = true; peer.destroy(); }
+      start(lastIdentity);
+    } catch (e) { console.warn("[transport] TURN escalation restart failed", e); }
     return true;
   }
   function publishPeerServerStatus(status, detail = {}) {
