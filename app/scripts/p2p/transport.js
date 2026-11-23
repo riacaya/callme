@@ -59,13 +59,26 @@
   const isNoTurnMode = () => {
     try { return localStorage.getItem("callme-v2-no-turn") === "1"; } catch { return false; }
   };
-  const iceServers = () => isNoTurnMode() ? [...STUN_SERVERS] : [...STUN_SERVERS, ...TURN_ONLY_SERVERS];
+  const iceServers = () => {
+    if (isNoTurnMode()) return [...STUN_SERVERS];
+    // P2P diperkuat: coba direct/STUN dulu; TURN dipakai hanya setelah eskalasi gagal.
+    if (!turnEscalated) return [...STUN_SERVERS];
+    return [...STUN_SERVERS, ...TURN_ONLY_SERVERS];
+  };
   const normalizePeerIdentity = (value) =>
     window.CallMeIdentity?.withoutPeerPrefix?.(value) ||
     window.CallMeApp?.normalize?.(value) ||
     String(value || "")
       .replace(/^cm-/i, "")
       .toLowerCase();
+  function escalateToTurn(reason) {
+    if (turnEscalated || isNoTurnMode() || !lastIdentity) return false;
+    turnEscalated = true;
+    console.warn("[transport] escalating to TURN", reason || "");
+    publishPeerServerStatus("connecting", { reason: "turn-escalation", escalateReason: reason || "" });
+    try { start(lastIdentity); } catch (e) { console.warn("[transport] TURN escalation restart failed", e); }
+    return true;
+  }
   function publishPeerServerStatus(status, detail = {}) {
     serverStatus = status;
     window.dispatchEvent(
@@ -166,6 +179,7 @@
             detail: { scope: "connection", error },
           }),
         );
+        if (error?.type === "webrtc" && !turnEscalated && !isNoTurnMode()) escalateToTurn("peer-webrtc-error");
         return;
       }
       clearTimeout(peerOpenTimer);
@@ -299,8 +313,19 @@
       };
       void retry();
     };
+    const watchIceFailure = () => {
+      const pc = next.peerConnection;
+      if (!pc || pc.__callmeIceWatched) return;
+      pc.__callmeIceWatched = true;
+      pc.addEventListener("iceconnectionstatechange", () => {
+        if (pc.iceConnectionState === "failed" && connections.get(next.peer) === next) {
+          escalateToTurn("ice-failed:" + next.peer);
+        }
+      });
+    };
     next.on("open", () => {
       if (connections.get(next.peer) !== next) return;
+      watchIceFailure();
       const self = normalizePeerIdentity(
         sessionStorage.getItem("callme-v2-session-user") ||
           localStorage.getItem("callme-v2-user") ||
@@ -317,6 +342,8 @@
       while (queue.length && next.open) next.send(queue.shift());
       pending.delete(next.peer);
     });
+    setTimeout(watchIceFailure, 300);
+    setTimeout(watchIceFailure, 1500);
     next.on("data", (data) => {
       if (connections.get(next.peer) !== next) return;
       if (data?.kind === "presence-ping") {
@@ -627,6 +654,7 @@
           detail: { peerId: next.peer, status: "offline", reason: "connection-error" },
         }),
       );
+      if (!turnEscalated && !isNoTurnMode()) escalateToTurn("connection-error:" + next.peer);
     });
   }
   function connect(peerId, allowStandby = false) {
@@ -779,6 +807,7 @@
     peerOpenTimer = null;
     registerTimer = null;
     idConflictRetries = 0;
+    turnEscalated = false;
     lastIdentity = "";
     connections.forEach((item) => item.close());
     for (const timer of presenceTimers.values()) clearTimeout(timer);
