@@ -5,8 +5,14 @@
   // Profil tidak berubah tiap detik. Cache 5 menit mencegah panel friends dan
   // pencarian menyalakan request Apps Script (±2 detik) berulang kali.
   const PROFILE_TTL_MS = 5 * 60 * 1000;
+  const pushAvatarToAndroid = (id, data) => {
+    try {
+      const photo = data?.profile_photo || data?.photo_url || "";
+      if (photo && window.CallMeAndroid?.cacheProfilePhoto) window.CallMeAndroid.cacheProfilePhoto(String(id||"").replace(/^cm-/i,""), photo);
+    } catch {}
+  };
   const read = (id) => { try { return JSON.parse(localStorage.getItem(cacheKey(id)) || "null"); } catch { return null; } };
-  const write = (id, data) => { if (data) localStorage.setItem(cacheKey(id), JSON.stringify({ ...data, cachedAt: Date.now() })); return data; };
+  const write = (id, data) => { if (data) { localStorage.setItem(cacheKey(id), JSON.stringify({ ...data, cachedAt: Date.now() })); pushAvatarToAndroid(id, data); } return data; };
   async function get(username, requester, token) {
     const target = window.CallMeApp?.normalize?.(key(username)) || key(username);
     const cached = read(target);
@@ -34,6 +40,7 @@
       profile_photo: user.photo_url || user.profile_photo || current.profile_photo || "",
     };
     await window.CallMeStorage?.put?.("contacts", updated);
+    pushAvatarToAndroid(identity, updated);
     return updated;
   }
   async function syncContact(peerId, requester, token) {
