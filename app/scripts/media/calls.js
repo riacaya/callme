@@ -411,6 +411,7 @@
           if (callEnded || callSession !== session || currentCall !== attempt) return;
           cleanupAttempt();
           remoteReceived = true;
+          try { window.CallMeSound?.stopRingtone?.(); } catch (_) {}
           if (session.connectTimer) clearTimeout(session.connectTimer);
           // Aliran remote sudah membuktikan panggilan terjawab — hentikan
           // hitung mundur "menunggu jawaban" walau sinyal call-accepted hilang
@@ -537,9 +538,12 @@
         await window.CallMeP2P?.probe?.(target, 2000);
       if (callSession !== session || callEnded) return;
       if (awake) {
+        session.waitingForAnswer = true;
+        try { window.CallMeSound?.startRingtone?.(); } catch (_) {}
         void startOutgoingP2P(mode, target, session);
       } else {
         session.waitingForAnswer = true;
+        try { window.CallMeSound?.startRingtone?.(); } catch (_) {}
         const p2pReady = window.CallMeP2P?.isPeerReady?.();
         status.textContent = p2pReady ? "Menunggu jawaban..." : "Koneksi P2P belum siap, menunggu jawaban lewat notifikasi...";
         window.CallMePush?.call?.(target, mode === "video", session.logId);
