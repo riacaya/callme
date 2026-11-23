@@ -33,16 +33,20 @@
     var peer = String(incoming.peer || incoming.peerId || "").replace(/^cm-/i, "");
     var video = incoming.metadata && (incoming.metadata.video === true || incoming.metadata.video === "true");
     var photo = "";
+    var name = senderName(peer);
     try {
       var prof = window.CallMeProfileRepository && window.CallMeProfileRepository.read && window.CallMeProfileRepository.read(peer);
       photo = String((prof && (prof.profile_photo || prof.photo_url)) || "");
       if (photo.length > 250000) photo = "";
+      var dn = String((prof && (prof.display_name || prof.name)) || "").trim();
+      if (dn) name = dn;
     } catch (_) {}
     post("incoming-call", {
       peerId: peer,
       callMode: video ? "video" : "voice",
       title: "Panggilan masuk",
-      body: (video ? "Panggilan video" : "Panggilan suara") + " dari " + senderName(peer),
+      body: (video ? "Panggilan video" : "Panggilan suara") + " dari " + name,
+      name: name,
       photo: photo
     });
   });
