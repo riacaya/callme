@@ -71,10 +71,14 @@
     String(value || "")
       .replace(/^cm-/i, "")
       .toLowerCase();
+  const DIRECT_FAIL_LIMIT = 3;
   function escalateToTurn(reason) {
     if (turnEscalated || isNoTurnMode() || !lastIdentity) return false;
+    directFailCount++;
+    console.warn("[transport] direct failure", directFailCount, "/", DIRECT_FAIL_LIMIT, reason || "");
+    if (directFailCount < DIRECT_FAIL_LIMIT) return false;
     turnEscalated = true;
-    console.warn("[transport] escalating to TURN", reason || "");
+    console.warn("[transport] escalating to TURN after repeated direct failures", reason || "");
     publishPeerServerStatus("connecting", { reason: "turn-escalation", escalateReason: reason || "" });
     try { start(lastIdentity); } catch (e) { console.warn("[transport] TURN escalation restart failed", e); }
     return true;
@@ -374,6 +378,7 @@
         next.__callmeRoom = room;
         readyConnections.add(next);
         next.__lastPresence = Date.now();
+        directFailCount = 0;
         if (data.type === "hello")
           try {
             next.send({ type: "hello-ack", user: self, room });
@@ -807,6 +812,7 @@
     peerOpenTimer = null;
     registerTimer = null;
     idConflictRetries = 0;
+    directFailCount = 0;
     turnEscalated = false;
     lastIdentity = "";
     connections.forEach((item) => item.close());

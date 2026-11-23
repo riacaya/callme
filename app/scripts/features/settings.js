@@ -112,7 +112,7 @@
       if (turnEnabledInput) turnEnabledInput.checked = enabled;
       if (turnStatus) {
         turnStatus.textContent = enabled
-          ? "Aktif (default): coba P2P/direct dulu, otomatis fallback ke TURN jika direct gagal. P2P akan dimulai ulang saat diubah."
+          ? "Aktif (default): coba P2P/direct dulu; jika gagal berulang kali baru otomatis fallback ke TURN. P2P akan dimulai ulang saat diubah."
           : "Nonaktif: gunakan STUN/direct saja (tanpa relay TURN). Jika direct tidak memungkinkan, koneksi bisa gagal. P2P akan dimulai ulang saat diubah.";
       }
     };
@@ -128,7 +128,7 @@
           window.CallMeTransport.start(user);
           if (turnStatus) {
             turnStatus.textContent = enabled
-              ? "TURN aktif. P2P dimulai ulang (prioritas direct, fallback TURN jika gagal)."
+              ? "TURN aktif. P2P dimulai ulang (prioritas direct, fallback TURN jika gagal berulang kali)."
               : "TURN nonaktif. P2P dimulai ulang (hanya STUN/direct).";
           }
         } catch (e) {
